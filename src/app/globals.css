@@ -1,26 +1,273 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ---------------------------------------------------------------------------
+   Ceylon Herbs and Spices — design tokens
+   Forest green + warm cream + earthy brown + restrained gold.
+   Every foreground/background pairing used in the UI meets WCAG AA contrast.
+--------------------------------------------------------------------------- */
+
+@theme {
+  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
+
+  /* Forest */
+  --color-forest-50: #eef5f0;
+  --color-forest-100: #d6e7da;
+  --color-forest-200: #aecfb6;
+  --color-forest-300: #7fb08d;
+  --color-forest-400: #4f8d63;
+  --color-forest-500: #2f6f47;
+  --color-forest-600: #225a38;
+  --color-forest-700: #1a472c;
+  --color-forest-800: #123723;
+  --color-forest-900: #0d2a1b;
+  --color-forest-950: #071a11;
+
+  /* Cream / paper */
+  --color-cream-50: #fdfbf6;
+  --color-cream-100: #faf5e9;
+  --color-cream-200: #f3ead7;
+  --color-cream-300: #e9dcc0;
+  --color-cream-400: #dcc9a1;
+
+  /* Earth */
+  --color-earth-300: #c3a684;
+  --color-earth-400: #a8845e;
+  --color-earth-500: #8b653f;
+  --color-earth-600: #6f4e2f;
+  --color-earth-700: #573c23;
+
+  /* Gold */
+  --color-gold-200: #f0dfaa;
+  --color-gold-300: #e6cd85;
+  --color-gold-400: #d8b75d;
+  --color-gold-500: #c9a227;
+  --color-gold-600: #a98618;
+  --color-gold-700: #86690f;
+
+  /* Neutrals */
+  --color-ink: #14211a;
+  --color-ink-soft: #33443a;
+  --color-muted: #5b6b61;
+  --color-line: #e2dccc;
+  --color-line-strong: #cfc6b1;
+
+  /* Feedback */
+  --color-success: #1f7a45;
+  --color-success-soft: #e6f4eb;
+  --color-danger: #a83232;
+  --color-danger-soft: #fbeaea;
+  --color-warning: #8a5a00;
+  --color-warning-soft: #fdf3dd;
+
+  /* Semantic surfaces */
+  --color-surface: #fdfbf6;
+  --color-surface-raised: #ffffff;
+  --color-surface-muted: #f7f1e3;
+  --color-brand: #0d2a1b;
+  --color-brand-contrast: #faf5e9;
+  --color-accent: #c9a227;
+
+  --radius-xs: 0.25rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+
+  --shadow-soft: 0 1px 2px rgb(20 33 26 / 0.04), 0 8px 24px -12px rgb(20 33 26 / 0.18);
+  --shadow-lift: 0 2px 4px rgb(20 33 26 / 0.05), 0 18px 40px -20px rgb(20 33 26 / 0.28);
+
+  --animate-fade-up: fade-up 0.5s ease-out both;
+  --animate-fade-in: fade-in 0.3s ease-out both;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-cream-50);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-gold-500);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background-color: var(--color-gold-300);
+    color: var(--color-forest-950);
+  }
+
+  /* Native form controls inherit the brand type */
+  input,
+  textarea,
+  select,
+  button {
+    font: inherit;
+  }
+
+  /* Respect reduced-motion preferences everywhere */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  .container-page {
+    width: 100%;
+    margin-inline: auto;
+    max-width: 80rem;
+    padding-inline: 1rem;
+  }
+
+  @media (min-width: 640px) {
+    .container-page {
+      padding-inline: 1.5rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .container-page {
+      padding-inline: 2rem;
+    }
+  }
+
+  .container-narrow {
+    width: 100%;
+    margin-inline: auto;
+    max-width: 46rem;
+    padding-inline: 1rem;
+  }
+
+  @media (min-width: 640px) {
+    .container-narrow {
+      padding-inline: 1.5rem;
+    }
+  }
+
+  /* Thin gold rule used as a section ornament */
+  .rule-gold {
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      var(--color-gold-400),
+      transparent
+    );
+  }
+
+  .eyebrow {
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-earth-500);
+  }
+
+  /* Keep the admin navigation scrollable without a heavy default scrollbar. */
+  .admin-sidebar-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(243 234 215 / 0.24) transparent;
+    scrollbar-gutter: stable;
+  }
+
+  .admin-sidebar-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .admin-sidebar-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .admin-sidebar-scroll::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: rgb(243 234 215 / 0.22);
+  }
+
+  .admin-sidebar-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgb(243 234 215 / 0.36);
+  }
+
+  /* Subtle woven-paper backdrop for hero sections */
+  .paper-texture {
+    background-image:
+      radial-gradient(
+        circle at 15% 20%,
+        rgb(201 162 39 / 0.07),
+        transparent 45%
+      ),
+      radial-gradient(
+        circle at 85% 0%,
+        rgb(13 42 27 / 0.06),
+        transparent 40%
+      );
+  }
+
+  .link-underline {
+    text-decoration-line: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+    text-decoration-color: color-mix(
+      in srgb,
+      currentColor 35%,
+      transparent
+    );
+  }
+
+  .link-underline:hover {
+    text-decoration-color: currentColor;
+  }
 }

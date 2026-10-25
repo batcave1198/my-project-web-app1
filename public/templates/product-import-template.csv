@@ -1,0 +1,3 @@
+product_id,name,price_usd,category,sale_mode,stock,status,slug,compare_at_price,short_description,description,image_urls,tags,is_featured
+CHS-SAMPLE-001,Sample product,4.99,ground-spices,UNIT,25,DRAFT,sample-product,6.50,Short description,"Longer description, with a comma.",,sample|spice,false
+CHS-WEIGHT-001,Sample weight product,2.50,ground-spices,WEIGHT,1000,DRAFT,sample-weight-product,3.00,Sold by weight,"Price is per 100g and stock is in grams.",,sample|spice,false

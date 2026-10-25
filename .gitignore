@@ -32,6 +32,17 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+
+# local portable postgres cluster (dev only)
+/.devdb/
+
+# local media fallback when Cloudinary is not configured
+/public/uploads/
+
+# test artefacts
+/playwright-report/
+/test-results/
 
 # vercel
 .vercel
