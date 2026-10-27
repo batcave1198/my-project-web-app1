@@ -15,7 +15,7 @@ This project needs:
 
 - Node.js 22+ (Next.js server)
 - PostgreSQL 17
-- A persistent filesystem for uploaded images
+- A persistent filesystem for uploaded images, videos and audio
 - Nginx, SSL, PM2 and firewall access
 
 Recommended Hostinger VPS:
@@ -72,21 +72,30 @@ or port `587` (STARTTLS). Confirm the exact values in hPanel.
 
 ### Business content
 
-After deployment, add these through the admin panel:
+After deployment, add the database-backed content through the admin panel:
 
 - [ ] Store name, contact email, phone, and address
-- [ ] WhatsApp and social links
+- [ ] WhatsApp link in settings
 - [ ] Categories
 - [ ] Products: names, prices, weights, stock, descriptions and photos
 - [ ] Delivery zones and delivery charges
 - [ ] Free-delivery threshold, if any
-- [ ] FAQ, shipping/returns/privacy/terms content
-- [ ] Homepage content
-- [ ] Gallery photos
+- [ ] FAQ categories, questions and answers
+- [ ] Gallery photos and videos
 - [ ] Blog posts and approved reviews, if needed
+- [ ] Background music: upload a track and mark one active
+- [ ] Review the pending legal policy descriptions before launch; add approved
+      full policy wording only after it has been reviewed
 
-> `npm run db:seed` does **not** create products, blogs, or reviews. Those must
-> be added in the admin panel.
+Then edit the file-based content on the server or deploy it from Git:
+
+- [ ] `content/social-links.yaml` — Facebook, Instagram and TikTok URLs
+      (YouTube optional)
+- [ ] `content/site-copy.yaml` — public page headings and paragraphs
+
+> `npm run db:seed` does **not** create products, blogs, gallery items, music or
+> reviews. Those must be added in the admin panel. The two YAML files are edited
+> directly, not through the admin panel. See `content/README.md`.
 
 ### Existing data decision
 
@@ -366,9 +375,11 @@ sudo chown -R deploy:deploy /var/www/ceylon-herbs
 chmod 600 .env
 mkdir -p public/uploads
 chmod 755 public/uploads
+chmod 644 content/*.yaml content/*.md
 ```
 
-The app must be able to write to `public/uploads`. Never make the whole project
+The app must be able to write to `public/uploads`. The `content/` files only
+need to be readable by the `deploy` user. Never make the whole project
 world-writable.
 
 ---
@@ -428,12 +439,13 @@ server {
     listen [::]:80;
     server_name yourdomain.com www.yourdomain.com;
 
-    # The app accepts images up to 5MB; multipart overhead needs a little more.
-    client_max_body_size 6M;
+    # The app accepts videos up to 50MB; 64M leaves multipart overhead headroom.
+    # Image and audio uploads are smaller and use the same limit.
+    client_max_body_size 64M;
 
-    # Uploaded images are immutable, random filenames. Serve them directly.
-    # Block anything that is not an allowed image type, even if a file is
-    # accidentally written to this directory outside the upload pipeline.
+    # Uploaded media uses immutable, random filenames. Serve it directly.
+    # Block executable/active content even if a file is accidentally written
+    # to this directory outside the upload pipeline.
     location ~* ^/uploads/.*\.(php|phtml|phar|html?|svg|xml|js|mjs|css|txt|json)$ {
         return 404;
     }
@@ -543,8 +555,9 @@ settings and `MAIL_FROM` mailbox.
 
 ## 10. Upload cleanup cron
 
-Uploads that are never attached to a product, blog, review or gallery item are
-removed after 24 hours. Create a log file and add a daily cron job:
+Uploads that are never attached to a product, blog, review, gallery item or
+music track are removed after 24 hours. This includes images, gallery/blog
+videos and background-music audio. Create a log file and add a daily cron job:
 
 ```bash
 mkdir -p /home/deploy/logs
@@ -609,17 +622,26 @@ tar -czf /var/backups/ceylon/uploads-$(date +%F).tar.gz \
   -C /var/www/ceylon-herbs/public uploads
 ```
 
-Add both to cron:
+File-based copy and social links backup:
+
+```bash
+tar -czf /var/backups/ceylon/content-$(date +%F).tar.gz \
+  -C /var/www/ceylon-herbs content
+```
+
+Add all three to cron:
 
 ```cron
 0 2 * * * pg_dump -h 127.0.0.1 -U ceylon -d ceylon -Fc -f /var/backups/ceylon/ceylon-$(date +\%F).dump
 30 2 * * * tar -czf /var/backups/ceylon/uploads-$(date +\%F).tar.gz -C /var/www/ceylon-herbs/public uploads
+45 2 * * * tar -czf /var/backups/ceylon/content-$(date +\%F).tar.gz -C /var/www/ceylon-herbs content
 ```
 
 Recommended:
 
 - Keep daily PostgreSQL backups.
 - Keep daily or weekly uploads backups.
+- Back up `content/` if it is edited directly on the server.
 - Copy backups off the VPS (Hostinger snapshot, object storage, or another
   machine).
 - Take a VPS snapshot before major updates.
@@ -643,6 +665,14 @@ tar -xzf /var/backups/ceylon/uploads-YYYY-MM-DD.tar.gz -C public
 chown -R deploy:deploy public/uploads
 ```
 
+Restore content copy and social links example:
+
+```bash
+cd /var/www/ceylon-herbs
+tar -xzf /var/backups/ceylon/content-YYYY-MM-DD.tar.gz -C .
+chmod 644 content/*.yaml content/*.md
+```
+
 ---
 
 ## 12. Go-live checklist
@@ -664,8 +694,12 @@ chown -R deploy:deploy public/uploads
 - [ ] Order appears in the admin order list
 - [ ] Product stock changes correctly
 - [ ] Blog/review image uploads work
-- [ ] Oversized/invalid files are rejected
-- [ ] Upload cleanup cron runs
+- [ ] Gallery video upload and home-page selection work
+- [ ] Background music upload, activation and mute control work
+- [ ] Oversized/invalid image, video and audio files are rejected
+- [ ] Editing `content/site-copy.yaml` changes a public page after refresh
+- [ ] Editing `content/social-links.yaml` changes the footer/contact icons
+- [ ] Upload cleanup cron runs and preserves referenced video/audio
 - [ ] Mobile layout works
 - [ ] Test on a real phone
 - [ ] A database and uploads backup has been taken and restored once
@@ -674,7 +708,8 @@ chown -R deploy:deploy public/uploads
 
 ## 13. Moving current local data to production
 
-Only do this if the current products, blogs, reviews and images must go live.
+Only do this if the current products, blogs, reviews, gallery media, music and
+images must go live.
 
 ### 13.1 Dump the local database
 
@@ -718,9 +753,10 @@ npm run db:deploy
 Do **not** run `npm run db:seed` after restoring a full database unless the admin
 account is missing/deleted.
 
-### 13.3 Copy uploaded images
+### 13.3 Copy uploaded media
 
-Upload `public/uploads` from the local project to the same path on the VPS:
+Upload `public/uploads` (images, gallery/blog videos and music) from the local
+project to the same path on the VPS:
 
 ```powershell
 scp -r .\public\uploads deploy@YOUR_SERVER_IP:/var/www/ceylon-herbs/public/
@@ -795,13 +831,17 @@ tar -czf /var/backups/ceylon/pre-update-uploads-$(date +%F).tar.gz -C /var/www/c
   `SESSION_SECRET` without planning for MFA re-enrollment, because existing TOTP
   secrets and recovery-code hashes depend on it.
 
-### Image uploads
+### Image, video and audio uploads
 
-- Files are validated by decoding their actual bytes with `sharp`.
-- Only JPEG, PNG, WebP, AVIF and GIF inputs are accepted.
-- Inputs are limited to 5MB, 8000px, 40 megapixels and 120 animated frames.
-- Every upload is re-encoded to WebP with metadata stripped.
-- Per-user daily quotas and per-user/per-IP rate limits apply.
+- Images are validated by decoding their actual bytes with `sharp`.
+- Only JPEG, PNG, WebP, AVIF and GIF image inputs are accepted.
+- Image inputs are limited to 5MB, 8000px, 40 megapixels and 120 animated
+  frames. Every image is re-encoded to WebP with metadata stripped.
+- Gallery videos accept MP4/WebM up to 50MB. They are magic-byte checked and
+  served as uploaded; this project does not transcode video.
+- Background music accepts MP3/M4A/OGG/WAV/WebM up to 20MB, magic-byte checked.
+- Per-user daily quotas and per-user/per-IP rate limits apply to all uploads.
+- Nginx must allow 64MB request bodies for video uploads (`client_max_body_size`).
 - `public/uploads` is git-ignored and must be backed up separately.
 - Cloudinary variables are reserved for future use; new uploads are local.
 

@@ -1,0 +1,14 @@
+# Social links
+#
+# These links are the single source of truth for the storefront footer and the
+# contact page. Edit a URL, save the file, and refresh the site. The change does
+# not need a rebuild or a database update.
+#
+# Leave a value empty ("") to hide that icon. Only http(s) URLs are used.
+# Facebook, Instagram and TikTok are required for the live shop; YouTube is
+# optional.
+
+facebook: ""
+instagram: ""
+tiktok: ""
+youtube: ""

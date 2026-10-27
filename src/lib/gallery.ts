@@ -9,6 +9,10 @@ export function isDirectVideo(url: string) {
  * files are returned unchanged so they can be rendered with a <video> tag.
  */
 export function getVideoEmbedUrl(url: string): string | null {
+  // Uploaded gallery videos use a local, root-relative URL. They are already
+  // direct media files, so return them before trying to parse an absolute URL.
+  if (/^\/(uploads|images)\//.test(url) && isDirectVideo(url)) return url;
+
   let parsed: URL;
   try {
     parsed = new URL(url);

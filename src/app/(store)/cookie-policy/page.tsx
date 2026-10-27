@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PolicyPage } from "@/components/store/policy-page";
+import { getSiteCopy } from "@/lib/content";
 
 export const metadata: Metadata = {
   title: "Cookie Policy",
@@ -7,12 +8,14 @@ export const metadata: Metadata = {
   alternates: { canonical: "/cookie-policy" },
 };
 
-export default function CookiePolicyPage() {
+export default async function CookiePolicyPage() {
+  const copy = await getSiteCopy();
+
   return (
     <PolicyPage
-      title="Cookie Policy"
-      description="The store uses a small number of essential cookies for sign-in and cart session handling. A full cookie policy is being prepared."
-      contactPrompt="If you have a question about cookies or tracking, contact us and we will explain exactly what is used."
+      title={copy.policies.cookie.title}
+      description={copy.policies.cookie.description}
+      contactPrompt={copy.policies.cookie.contact}
     />
   );
 }

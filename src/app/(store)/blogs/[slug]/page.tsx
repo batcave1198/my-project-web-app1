@@ -6,6 +6,7 @@ import { ArrowLeft, BookOpen, ShoppingBag } from "lucide-react";
 import { BlogPhotoGallery } from "@/components/blogs/blog-photo-gallery";
 import { StarRating } from "@/components/reviews/star-rating";
 import { Button } from "@/components/ui/button";
+import { getSiteCopy } from "@/lib/content";
 import { db } from "@/lib/db";
 import { getVideoEmbedUrl, isDirectVideo } from "@/lib/gallery";
 import { serializeJsonLd } from "@/lib/json-ld";
@@ -54,6 +55,7 @@ export default async function BlogDetailPage({
   });
   if (!post) notFound();
 
+  const copy = await getSiteCopy();
   const products = await db.product.findMany({
     where: { blogPostId: post.id, status: "PUBLISHED" },
     orderBy: { name: "asc" },
@@ -102,11 +104,11 @@ export default async function BlogDetailPage({
         className="inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-forest-900"
       >
         <ArrowLeft className="size-4" />
-        Back to blogs & recipes
+        {copy.blogs.detail.back}
       </Link>
 
       <header className="mt-6 max-w-3xl">
-        <p className="eyebrow">Recipe & story</p>
+        <p className="eyebrow">{copy.blogs.detail.eyebrow}</p>
         <h1 className="mt-2 text-3xl font-semibold text-forest-900 sm:text-4xl">
           {post.title}
         </h1>
@@ -116,7 +118,7 @@ export default async function BlogDetailPage({
           </p>
         )}
         <p className="mt-4 text-sm text-muted">
-          Published {formatDate(post.createdAt)}
+          {copy.blogs.detail.published} {formatDate(post.createdAt)}
           {products.length > 0 &&
             ` · ${products.length} linked product${
               products.length === 1 ? "" : "s"
@@ -164,18 +166,17 @@ export default async function BlogDetailPage({
             <div className="flex items-center gap-2">
               <BookOpen className="size-4 text-gold-600" />
               <h2 className="text-base font-semibold text-forest-900">
-                Cook with these
+                {copy.blogs.detail.cookTitle}
               </h2>
             </div>
 
             {products.length === 0 ? (
               <div className="mt-3">
                 <p className="text-sm leading-relaxed text-muted">
-                  This story is not linked to a product yet. Browse our range to
-                  find the ingredients for your next meal.
+                  {copy.blogs.detail.noProducts}
                 </p>
                 <Button asChild variant="outline" className="mt-4 w-full">
-                  <Link href="/shop">Explore the shop</Link>
+                  <Link href="/shop">{copy.blogs.detail.exploreShop}</Link>
                 </Button>
               </div>
             ) : (
@@ -229,14 +230,13 @@ export default async function BlogDetailPage({
 
           <div className="rounded-lg border border-dashed border-line-strong p-5">
             <p className="text-sm font-semibold text-forest-900">
-              Made this recipe?
+              {copy.blogs.detail.madeTitle}
             </p>
             <p className="mt-1.5 text-xs leading-relaxed text-muted">
-              Leave a review with a photo on the product page. Approved photos
-              appear in our customer gallery.
+              {copy.blogs.detail.madeBody}
             </p>
             <Button asChild variant="outline" className="mt-4 w-full">
-              <Link href="/reviews">Read customer reviews</Link>
+              <Link href="/reviews">{copy.blogs.detail.readReviews}</Link>
             </Button>
           </div>
         </aside>

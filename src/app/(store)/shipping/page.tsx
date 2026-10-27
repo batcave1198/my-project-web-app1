@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PolicyPage } from "@/components/store/policy-page";
+import { getSiteCopy } from "@/lib/content";
 
 export const metadata: Metadata = {
   title: "Shipping & Delivery",
@@ -8,13 +9,15 @@ export const metadata: Metadata = {
   alternates: { canonical: "/shipping" },
 };
 
-export default function ShippingPage() {
+export default async function ShippingPage() {
+  const copy = await getSiteCopy();
+
   return (
     <PolicyPage
-      eyebrow="Help"
-      title="Shipping & Delivery"
-      description="Delivery zones, charges and estimated timeframes are set in the admin dashboard and shown at checkout before an order is placed."
-      contactPrompt="If you need a delivery estimate for a specific district before ordering, contact us with your location."
+      eyebrow={copy.policies.shipping.eyebrow}
+      title={copy.policies.shipping.title}
+      description={copy.policies.shipping.description}
+      contactPrompt={copy.policies.shipping.contact}
     />
   );
 }

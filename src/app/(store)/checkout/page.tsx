@@ -5,6 +5,7 @@ import { ArrowLeft, LockKeyhole } from "lucide-react";
 import { CheckoutForm, type CheckoutLine, type CheckoutMethod, type CheckoutZone } from "@/components/checkout/checkout-form";
 import { getCart } from "@/lib/cart/get-cart";
 import { getCurrentUser } from "@/lib/auth/dal";
+import { getSiteCopy } from "@/lib/content";
 import { db } from "@/lib/db";
 import { formatMoneyDecimal } from "@/lib/money";
 import { weightLineAmount } from "@/lib/products/weight";
@@ -17,7 +18,7 @@ export const metadata: Metadata = {
 };
 
 export default async function CheckoutPage() {
-  const cart = await getCart();
+  const [cart, copy] = await Promise.all([getCart(), getSiteCopy()]);
   if (!cart || cart.items.length === 0) redirect("/cart");
 
   const [user, zones] = await Promise.all([
@@ -102,17 +103,17 @@ export default async function CheckoutPage() {
         className="inline-flex items-center gap-1.5 text-sm font-medium text-muted transition-colors hover:text-forest-900"
       >
         <ArrowLeft className="size-4" />
-        Back to cart
+        {copy.checkout.back}
       </Link>
 
       <div className="mt-4 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="eyebrow">Secure checkout</p>
-          <h1 className="mt-1 text-3xl font-semibold text-forest-900">Complete your order</h1>
+          <p className="eyebrow">{copy.checkout.eyebrow}</p>
+          <h1 className="mt-1 text-3xl font-semibold text-forest-900">{copy.checkout.title}</h1>
         </div>
         <p className="inline-flex items-center gap-1.5 text-xs text-muted">
           <LockKeyhole className="size-3.5 text-gold-600" />
-          Encrypted payment via PayHere
+          {copy.checkout.paymentNote}
         </p>
       </div>
 

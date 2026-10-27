@@ -5,6 +5,7 @@ import { MfaForm } from "@/components/auth/mfa-form";
 import { Alert } from "@/components/ui/alert";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { readMfaChallenge } from "@/lib/auth/mfa";
+import { getSiteCopy } from "@/lib/content";
 import { safeRedirectPath } from "@/lib/validation/auth";
 
 export const metadata: Metadata = {
@@ -35,18 +36,22 @@ export default async function LoginPage({
     );
   }
 
-  const challenge = params.mfa === "1" ? await readMfaChallenge() : null;
+  const [challenge, copy] = await Promise.all([
+    params.mfa === "1" ? readMfaChallenge() : Promise.resolve(null),
+    getSiteCopy(),
+  ]);
 
   if (challenge) {
     return (
       <div>
-        <p className="eyebrow">Account</p>
+        <p className="eyebrow">{copy.auth.login.eyebrow}</p>
         <h1 className="mt-2 text-3xl font-semibold text-forest-900 sm:text-4xl">
-          Two-step verification
+          {copy.auth.login.mfaTitle}
         </h1>
         <p className="mt-2 mb-8 text-sm leading-relaxed text-muted">
-          Enter the code from the authenticator app for{" "}
-          <span className="font-medium text-ink-soft">{challenge.user.email}</span>.
+          {copy.auth.login.mfaBodyPrefix}{" "}
+          <span className="font-medium text-ink-soft">{challenge.user.email}</span>
+          {copy.auth.login.mfaBodySuffix}
         </p>
 
         <MfaForm next={params.next} />
@@ -56,12 +61,12 @@ export default async function LoginPage({
 
   return (
     <div>
-      <p className="eyebrow">Account</p>
+      <p className="eyebrow">{copy.auth.login.eyebrow}</p>
       <h1 className="mt-2 text-3xl font-semibold text-forest-900 sm:text-4xl">
-        Welcome back
+        {copy.auth.login.title}
       </h1>
       <p className="mt-2 mb-8 text-sm leading-relaxed text-muted">
-        Sign in to track orders, save your details and keep a wishlist.
+        {copy.auth.login.body}
       </p>
 
       {params.reset === "1" && (

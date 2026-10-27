@@ -30,7 +30,13 @@ export type CartLine = {
   available: number;
 };
 
-export function CartItems({ items }: { items: CartLine[] }) {
+export function CartItems({
+  items,
+  empty,
+}: {
+  items: CartLine[];
+  empty: { title: string; body: string; action: string };
+}) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -71,10 +77,10 @@ export function CartItems({ items }: { items: CartLine[] }) {
   if (items.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-line-strong py-16 text-center">
-        <p className="text-lg font-medium text-forest-900">Your cart is empty</p>
-        <p className="mt-1 text-sm text-muted">Add a product from the shop to get started.</p>
+        <p className="text-lg font-medium text-forest-900">{empty.title}</p>
+        <p className="mt-1 text-sm text-muted">{empty.body}</p>
         <Link href="/shop" className="link-underline mt-4 inline-block text-sm font-semibold text-forest-900">
-          Browse products
+          {empty.action}
         </Link>
       </div>
     );

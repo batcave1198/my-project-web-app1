@@ -3,6 +3,7 @@ import Link from "next/link";
 import { BadgePercent } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StandbyPage } from "@/components/store/standby-page";
+import { getSiteCopy } from "@/lib/content";
 
 export const metadata: Metadata = {
   title: "Deals & Offers",
@@ -11,16 +12,18 @@ export const metadata: Metadata = {
   alternates: { canonical: "/deals" },
 };
 
-export default function DealsPage() {
+export default async function DealsPage() {
+  const copy = await getSiteCopy();
+
   return (
     <StandbyPage
-      eyebrow="Offers"
-      title="Offers appear here when they are live"
-      description="Store-wide discounts and coupon codes are created in the admin dashboard with start and end dates. Nothing is advertised unless it is genuinely active."
+      eyebrow={copy.deals.eyebrow}
+      title={copy.deals.title}
+      description={copy.deals.body}
       icon={BadgePercent}
     >
       <Button asChild variant="outline">
-        <Link href="/categories">Browse categories</Link>
+        <Link href="/categories">{copy.deals.action}</Link>
       </Button>
     </StandbyPage>
   );

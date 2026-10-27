@@ -78,6 +78,7 @@ async function main() {
     gallery,
     orderItems,
     mediaAssets,
+    musicTracks,
     siteSettings,
   ] = await Promise.all([
     prisma.productImage.findMany({ select: { url: true } }),
@@ -99,14 +100,15 @@ async function main() {
       select: { heroImageUrl: true, content: true },
     }),
     prisma.blogPost.findMany({
-      select: { imageUrls: true, content: true, excerpt: true },
+      select: { imageUrls: true, content: true, excerpt: true, videoUrl: true },
     }),
     prisma.review.findMany({ select: { imageUrls: true } }),
     prisma.galleryItem.findMany({
-      select: { imageUrl: true, thumbnailUrl: true },
+      select: { imageUrl: true, thumbnailUrl: true, videoUrl: true },
     }),
     prisma.orderItem.findMany({ select: { imageUrl: true } }),
     prisma.mediaAsset.findMany({ select: { url: true, secureUrl: true } }),
+    prisma.musicTrack.findMany({ select: { url: true } }),
     prisma.siteSetting.findMany({ select: { value: true } }),
   ]);
 
@@ -131,6 +133,7 @@ async function main() {
   }
   for (const row of blogPosts) {
     for (const url of row.imageUrls) referenced.add(url);
+    if (row.videoUrl) referenced.add(row.videoUrl);
     collectUploadUrlsFromText(row.content, referenced);
     collectUploadUrlsFromText(row.excerpt, referenced);
   }
@@ -140,11 +143,15 @@ async function main() {
   for (const row of gallery) {
     if (row.imageUrl) referenced.add(row.imageUrl);
     if (row.thumbnailUrl) referenced.add(row.thumbnailUrl);
+    if (row.videoUrl) referenced.add(row.videoUrl);
   }
   for (const row of orderItems) if (row.imageUrl) referenced.add(row.imageUrl);
   for (const row of mediaAssets) {
     referenced.add(row.url);
     referenced.add(row.secureUrl);
+  }
+  for (const row of musicTracks) {
+    if (row.url) referenced.add(row.url);
   }
   for (const row of siteSettings) collectFromJson(row.value, referenced);
 

@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { FileClock } from "lucide-react";
+import { getSiteCopy } from "@/lib/content";
 
 /**
  * Legal and policy pages are intentionally not filled with invented terms.
  * Until the business has reviewed and approved real policy copy, each page
- * states clearly that the policy is pending. Admin editing arrives in Phase 7.
+ * states clearly that the policy is pending. The surrounding copy comes from
+ * content/site-copy.yaml.
  */
-export function PolicyPage({
+export async function PolicyPage({
   eyebrow = "Legal",
   title,
   description,
@@ -17,6 +19,8 @@ export function PolicyPage({
   description: string;
   contactPrompt?: string;
 }) {
+  const copy = await getSiteCopy();
+
   return (
     <div className="container-narrow py-14 sm:py-18">
       <p className="eyebrow">{eyebrow}</p>
@@ -30,22 +34,19 @@ export function PolicyPage({
           <FileClock aria-hidden="true" className="size-5 text-earth-600" />
         </span>
         <h2 className="mt-4 text-xl font-semibold text-forest-900">
-          This policy is being finalised
+          {copy.policies.pendingTitle}
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-muted">
-          The full text is reviewed and approved by the business before it is
-          published. Nothing on this page is a substitute for that review, and no
-          legal terms are invented here.
+          {copy.policies.pendingBody}
         </p>
         <p className="mt-4 text-sm leading-relaxed text-muted">
-          {contactPrompt ??
-            "If you need an answer now, contact us and we will help directly."}
+          {contactPrompt ?? copy.policies.pendingContact}
         </p>
         <Link
           href="/contact"
           className="link-underline mt-5 inline-flex text-sm font-semibold text-forest-900"
         >
-          Contact us
+          {copy.policies.contactCta}
         </Link>
       </div>
     </div>

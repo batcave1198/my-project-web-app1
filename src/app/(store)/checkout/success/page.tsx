@@ -5,6 +5,7 @@ import { CheckCircle2, Clock, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { OrderReceipt } from "@/components/checkout/order-receipt";
 import { PaymentPoller } from "@/components/checkout/payment-poller";
+import { fillCopy, getSiteCopy } from "@/lib/content";
 import { db } from "@/lib/db";
 
 export const metadata: Metadata = {
@@ -28,6 +29,7 @@ export default async function CheckoutSuccessPage({
 
   if (!order) notFound();
 
+  const copy = await getSiteCopy();
   const paid = order.paymentStatus === "PAID";
   const failed = order.paymentStatus === "FAILED";
   const cancelled = order.status === "CANCELLED";
@@ -40,10 +42,11 @@ export default async function CheckoutSuccessPage({
         <div className="flex items-start gap-3">
           <CheckCircle2 className="mt-1 size-7 shrink-0 text-success" />
           <div>
-            <h1 className="text-3xl font-semibold text-forest-900">Thank you — payment received</h1>
+            <h1 className="text-3xl font-semibold text-forest-900">
+              {copy.checkout.success.paidTitle}
+            </h1>
             <p className="mt-2 text-sm leading-relaxed text-muted">
-              Your order is confirmed. We have emailed a copy of this receipt to {order.email} and
-              will let you know as it moves through packing and delivery.
+              {fillCopy(copy.checkout.success.paidBody, { email: order.email })}
             </p>
           </div>
         </div>
@@ -51,19 +54,21 @@ export default async function CheckoutSuccessPage({
         <div className="flex items-start gap-3">
           <XCircle className="mt-1 size-7 shrink-0 text-danger" />
           <div>
-            <h1 className="text-3xl font-semibold text-forest-900">Payment did not complete</h1>
+            <h1 className="text-3xl font-semibold text-forest-900">
+              {copy.checkout.success.failedTitle}
+            </h1>
             <p className="mt-2 text-sm leading-relaxed text-muted">
               {cancelled
-                ? "This order was cancelled before payment was confirmed."
-                : "PayHere reported that the payment failed. No money has been taken for this order."}
+                ? copy.checkout.success.cancelledBody
+                : copy.checkout.success.failedBody}
             </p>
             <div className="mt-5 flex flex-wrap gap-3">
               <Button asChild>
-                <Link href="/shop">Back to the shop</Link>
+                <Link href="/shop">{copy.checkout.success.backToShop}</Link>
               </Button>
               <Button asChild variant="outline">
                 <Link href={`/checkout/failed?order=${encodeURIComponent(order.orderNumber)}&token=${encodeURIComponent(order.accessToken)}`}>
-                  Order details
+                  {copy.checkout.success.orderDetails}
                 </Link>
               </Button>
             </div>
@@ -73,15 +78,16 @@ export default async function CheckoutSuccessPage({
         <div className="flex items-start gap-3">
           <Clock className="mt-1 size-7 shrink-0 text-gold-600" />
           <div>
-            <h1 className="text-3xl font-semibold text-forest-900">Confirming your payment</h1>
+            <h1 className="text-3xl font-semibold text-forest-900">
+              {copy.checkout.success.pendingTitle}
+            </h1>
             <p className="mt-2 text-sm leading-relaxed text-muted">
-              PayHere has returned you to our store. We are waiting for the server-side payment
-              notification before confirming the order. This page refreshes automatically — it
-              usually takes a few seconds.
+              {copy.checkout.success.pendingBody}
             </p>
             <p className="mt-2 text-xs text-muted">
-              Keep this page open. If it stays on this message, contact us with order number{" "}
-              <span className="font-mono text-forest-900">{order.orderNumber}</span>.
+              {fillCopy(copy.checkout.success.pendingNote, {
+                order: order.orderNumber,
+              })}
             </p>
           </div>
         </div>
@@ -93,10 +99,10 @@ export default async function CheckoutSuccessPage({
 
       <div className="mt-6 flex flex-wrap gap-3">
         <Button asChild variant="outline">
-          <Link href="/shop">Continue shopping</Link>
+          <Link href="/shop">{copy.checkout.success.continueShopping}</Link>
         </Button>
         <Button asChild variant="ghost">
-          <Link href="/contact">Need help with this order?</Link>
+          <Link href="/contact">{copy.checkout.success.help}</Link>
         </Button>
       </div>
     </div>

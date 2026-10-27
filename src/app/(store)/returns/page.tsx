@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PolicyPage } from "@/components/store/policy-page";
+import { getSiteCopy } from "@/lib/content";
 
 export const metadata: Metadata = {
   title: "Returns & Refunds",
@@ -8,13 +9,15 @@ export const metadata: Metadata = {
   alternates: { canonical: "/returns" },
 };
 
-export default function ReturnsPage() {
+export default async function ReturnsPage() {
+  const copy = await getSiteCopy();
+
   return (
     <PolicyPage
-      eyebrow="Help"
-      title="Returns & Refunds"
-      description="The returns window, eligibility conditions and refund process are being reviewed and will be published here in full."
-      contactPrompt="If something is wrong with an order you have received, contact us with the order number so we can help."
+      eyebrow={copy.policies.returns.eyebrow}
+      title={copy.policies.returns.title}
+      description={copy.policies.returns.description}
+      contactPrompt={copy.policies.returns.contact}
     />
   );
 }

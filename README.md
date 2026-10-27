@@ -4,10 +4,11 @@ A production-oriented storefront for Sri Lankan herbs, spices and natural
 products, with a database-driven admin panel. Built with Next.js (App Router),
 React, TypeScript, Tailwind CSS, PostgreSQL and Prisma.
 
-Catalogue content, delivery charges, policies, blog posts, reviews and site
-settings are managed in the admin panel. The seed deliberately creates **no
-products, no delivery prices and no contact details**, because those are real
-business decisions, not placeholders.
+Catalogue content, delivery charges, blog posts, reviews, gallery media,
+background music and site settings are managed in the admin panel. Public page
+paragraphs and social links live in the editable `content/` folder. The seed
+deliberately creates **no products, no delivery prices and no contact details**,
+because those are real business decisions, not placeholders.
 
 ---
 
@@ -26,7 +27,10 @@ business decisions, not placeholders.
 | Cart, guest/customer checkout, PayHere integration | Done |
 | CSV/Excel product import, order CSV export | Done |
 | Customer review photos, likes, moderation | Done |
-| Local image uploads with validation, quotas and cleanup | Done |
+| Gallery photos and videos, including a featured home-page video | Done |
+| Storefront background music with admin upload and an active track | Done |
+| File-based page copy (`content/site-copy.yaml`) and social links | Done |
+| Local image, video and audio uploads with validation, quotas and cleanup | Done |
 | Transactional email: verification, reset, paid order receipt | Done |
 
 Live payments and transactional email require production credentials. See
@@ -135,6 +139,10 @@ prisma/
 scripts/
   dev-db.mjs           Portable PostgreSQL lifecycle for local dev
   cleanup-uploads.mjs  Daily orphaned-upload cleanup
+content/
+  site-copy.yaml       Editable public page headings and paragraphs
+  social-links.yaml    Editable Facebook/Instagram/TikTok/YouTube links
+  README.md            Editing and deployment instructions for this folder
 src/app/(store)/       Public storefront routes
 src/app/(auth)/        Login, register, forgot/reset password
 src/app/account/       Customer account and security settings
@@ -160,7 +168,9 @@ src/proxy.ts           Route guard + nonce-based CSP
   IP headers are trusted only when `TRUST_PROXY=true`.
 - Image uploads are decoded with `sharp`, checked against a format/dimension/
   pixel allowlist, stripped of metadata, re-encoded to WebP and stored under a
-  randomised filename. Daily per-user quotas and cleanup prevent disk abuse.
+  randomised filename. Video (MP4/WebM, 50 MB) and audio (MP3/M4A/OGG/WAV/WebM,
+  20 MB) uploads are magic-byte checked, stored under randomised filenames and
+  covered by daily per-user quotas and cleanup.
 - Pages use a nonce-based Content-Security-Policy. Private routes also send
   `X-Robots-Tag: noindex`.
 - JSON-LD is escaped before rendering, and CSV exports neutralise spreadsheet
@@ -177,7 +187,8 @@ Recommended baseline: KVM 2 (2 vCPU, 8 GB RAM, 100 GB NVMe), Ubuntu 24.04 LTS.
 3. Create the database and a dedicated PostgreSQL role.
 4. Clone the repo to `/var/www/ceylon-herbs`, install with `npm ci`, set
    production env vars (including `TRUST_PROXY=true` and SMTP), then run
-   `npm run db:deploy && npm run build`.
+   `npm run db:deploy && npm run build`. Include the `content/` folder so the
+   file-based copy and social links deploy with the app.
 5. Run the app with PM2 (`next start`), with Nginx in front and Certbot SSL.
 6. Sign in as the administrator, enroll MFA, and store the recovery codes.
 7. Set the PayHere notify URL to the public HTTPS endpoint.
@@ -199,7 +210,8 @@ conservative:
 - No medical or health benefit claims.
 - No invented supplier partnerships or origin stories.
 - No reviews written on a customer's behalf.
-- Contact details and social links stay hidden until configured in settings.
+- Contact details stay hidden until configured in settings. Social links stay
+  hidden until real URLs are added to `content/social-links.yaml`.
 
 These rules are part of the product, not decoration — they apply to every new
 page and module.

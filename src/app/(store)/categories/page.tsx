@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Sprout } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getSiteCopy } from "@/lib/content";
 import { db } from "@/lib/db";
 
 export const metadata: Metadata = {
@@ -13,23 +14,26 @@ export const metadata: Metadata = {
 };
 
 export default async function CategoriesPage() {
-  const categories = await db.category
-    .findMany({
-      where: { isActive: true, parentId: null },
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        description: true,
-        imageUrl: true,
-        imageAlt: true,
-        _count: {
-          select: { products: { where: { status: "PUBLISHED" } } },
+  const [categories, copy] = await Promise.all([
+    db.category
+      .findMany({
+        where: { isActive: true, parentId: null },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          description: true,
+          imageUrl: true,
+          imageAlt: true,
+          _count: {
+            select: { products: { where: { status: "PUBLISHED" } } },
+          },
         },
-      },
-    })
-    .catch(() => []);
+      })
+      .catch(() => []),
+    getSiteCopy(),
+  ]);
 
   return (
     <div>
@@ -47,14 +51,12 @@ export default async function CategoriesPage() {
         </div>
         <div className="container-page relative py-16 sm:py-24">
           <div className="max-w-2xl">
-            <p className="eyebrow text-gold-300">Catalogue</p>
+            <p className="eyebrow text-gold-300">{copy.categories.hero.eyebrow}</p>
             <h1 className="mt-3 text-3xl leading-[1.1] font-semibold text-cream-50 sm:text-5xl">
-              Shop by category
+              {copy.categories.hero.title}
             </h1>
             <p className="mt-4 text-base leading-relaxed text-cream-200/90 sm:text-lg">
-              Explore Sri Lankan herbs, spices, teas and natural products by
-              category. Each collection lists only products that are published
-              and ready to order.
+              {copy.categories.hero.body}
             </p>
           </div>
         </div>
@@ -68,14 +70,13 @@ export default async function CategoriesPage() {
               className="mx-auto size-9 text-gold-600"
             />
             <h2 className="mt-4 text-xl font-semibold text-forest-900">
-              No categories published yet
+              {copy.categories.empty.title}
             </h2>
             <p className="mx-auto mt-2 max-w-md text-sm text-muted">
-              As soon as a category is added in the admin dashboard it appears
-              here — no deploy required.
+              {copy.categories.empty.body}
             </p>
             <Button asChild variant="outline" className="mt-6">
-              <Link href="/contact">Get in touch</Link>
+              <Link href="/contact">{copy.categories.empty.action}</Link>
             </Button>
           </div>
         ) : (

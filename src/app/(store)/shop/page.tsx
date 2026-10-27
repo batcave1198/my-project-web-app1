@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { formatMoneyDecimal } from "@/lib/money";
 import { formatWeight, maxWeightGrams } from "@/lib/products/weight";
 import { Button } from "@/components/ui/button";
+import { getSiteCopy } from "@/lib/content";
 
 export const metadata: Metadata = {
   title: "Shop All Products",
@@ -51,7 +52,7 @@ export default async function ShopPage({
 
   const { where, orderBy } = buildQuery({ q, category, sort, min, max });
 
-  const [categories, products, total] = await Promise.all([
+  const [categories, products, total, copy] = await Promise.all([
     db.category.findMany({ where: { isActive: true }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }], select: { id: true, name: true, slug: true } }),
     db.product.findMany({
       where,
@@ -71,6 +72,7 @@ export default async function ShopPage({
       },
     }),
     db.product.count({ where }),
+    getSiteCopy(),
   ]);
 
   const pages = Math.ceil(total / perPage);
@@ -79,13 +81,13 @@ export default async function ShopPage({
     <div className="container-page py-12">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="eyebrow">Shop</p>
-          <h1 className="mt-1 text-3xl font-semibold text-forest-900">All products</h1>
+          <p className="eyebrow">{copy.shop.eyebrow}</p>
+          <h1 className="mt-1 text-3xl font-semibold text-forest-900">{copy.shop.title}</h1>
           <p className="mt-1 text-sm text-muted">{total} {total === 1 ? "product" : "products"}</p>
         </div>
         <form className="flex flex-wrap items-center gap-2">
           <input type="hidden" name="category" value={category ?? ""} />
-          <input name="q" defaultValue={q ?? ""} placeholder="Search products..." className="h-10 rounded-md border border-line-strong px-3 text-sm" />
+          <input name="q" defaultValue={q ?? ""} placeholder={copy.shop.searchPlaceholder} className="h-10 rounded-md border border-line-strong px-3 text-sm" />
           <select name="sort" defaultValue={sort ?? "newest"} className="h-10 rounded-md border border-line-strong px-2 text-sm">
             <option value="newest">Newest</option>
             <option value="popular">Popular</option>
@@ -100,10 +102,10 @@ export default async function ShopPage({
       <div className="mt-8 grid gap-8 lg:grid-cols-[240px_1fr]">
         <aside className="space-y-6">
           <div>
-            <p className="text-sm font-semibold text-forest-900">Categories</p>
+            <p className="text-sm font-semibold text-forest-900">{copy.shop.filters}</p>
             <ul className="mt-2 space-y-1">
               <li>
-                <Link href="/shop" className={`text-sm ${!category ? "font-semibold text-forest-900" : "text-muted hover:text-forest-900"}`}>All</Link>
+                <Link href="/shop" className={`text-sm ${!category ? "font-semibold text-forest-900" : "text-muted hover:text-forest-900"}`}>{copy.shop.all}</Link>
               </li>
               {categories.map((c) => (
                 <li key={c.id}>
@@ -117,9 +119,9 @@ export default async function ShopPage({
         <div>
           {products.length === 0 ? (
             <div className="rounded-lg border border-dashed border-line-strong py-16 text-center">
-              <p className="text-base font-medium text-forest-900">No products found</p>
-              <p className="mt-1 text-sm text-muted">Try adjusting your filters or search.</p>
-              <Button asChild variant="outline" className="mt-4"><Link href="/shop">Clear filters</Link></Button>
+              <p className="text-base font-medium text-forest-900">{copy.shop.emptyTitle}</p>
+              <p className="mt-1 text-sm text-muted">{copy.shop.emptyBody}</p>
+              <Button asChild variant="outline" className="mt-4"><Link href="/shop">{copy.shop.clear}</Link></Button>
             </div>
           ) : (
             <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">

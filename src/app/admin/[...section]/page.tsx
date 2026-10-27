@@ -56,7 +56,7 @@ const modules: Record<string, { title: string; description: string }> = {
   settings: {
     title: "Settings",
     description:
-      "Store details, contact information, social links, shipping zones and payment configuration.",
+      "Store details, contact information, shipping zones and payment configuration. Public page copy and social links are edited in the content folder.",
   },
   "audit-logs": {
     title: "Audit Logs",

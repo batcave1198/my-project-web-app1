@@ -2,7 +2,8 @@
  * Static store configuration.
  *
  * Anything a shop owner would want to change without a deploy lives in the
- * SiteSetting table instead (contact details, policies, social links...).
+ * SiteSetting table instead (contact details, delivery, policies...).
+ * Public page copy and social links live in the editable `content/` folder.
  * This file only holds structure and safe defaults.
  */
 

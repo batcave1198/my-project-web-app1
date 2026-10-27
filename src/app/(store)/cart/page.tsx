@@ -4,6 +4,7 @@ import { ArrowRight, ShieldCheck, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CartItems, type CartLine } from "@/components/cart/cart-items";
 import { getCart } from "@/lib/cart/get-cart";
+import { getSiteCopy } from "@/lib/content";
 import { formatMoneyDecimal } from "@/lib/money";
 import { weightLineAmount } from "@/lib/products/weight";
 import { Prisma } from "@prisma/client";
@@ -14,7 +15,7 @@ export const metadata: Metadata = {
 };
 
 export default async function CartPage() {
-  const cart = await getCart();
+  const [cart, copy] = await Promise.all([getCart(), getSiteCopy()]);
 
   const items: CartLine[] = (cart?.items ?? []).map((item) => {
     const unit = item.variant ? item.variant.price : item.product.price;
@@ -52,40 +53,47 @@ export default async function CartPage() {
     <div className="container-page py-12 sm:py-16">
       <div className="flex items-end justify-between gap-4">
         <div>
-          <p className="eyebrow">Cart</p>
-          <h1 className="mt-1 text-3xl font-semibold text-forest-900">Your cart</h1>
+          <p className="eyebrow">{copy.cart.eyebrow}</p>
+          <h1 className="mt-1 text-3xl font-semibold text-forest-900">{copy.cart.title}</h1>
         </div>
         <Link href="/shop" className="hidden text-sm font-medium text-forest-900 hover:underline sm:block">
-          Continue shopping
+          {copy.cart.continueShopping}
         </Link>
       </div>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[1.5fr_0.8fr]">
         <div>
-          <CartItems items={items} />
+          <CartItems
+            items={items}
+            empty={{
+              title: copy.cart.emptyTitle,
+              body: copy.cart.emptyBody,
+              action: copy.cart.emptyAction,
+            }}
+          />
         </div>
 
         <aside className="space-y-4">
           <div className="rounded-lg border border-line bg-white p-6">
-            <h2 className="text-lg font-semibold text-forest-900">Order summary</h2>
+            <h2 className="text-lg font-semibold text-forest-900">{copy.cart.summary}</h2>
             <dl className="mt-4 space-y-2 text-sm">
               <div className="flex justify-between text-ink-soft">
-                <dt>Subtotal</dt>
+                <dt>{copy.cart.subtotal}</dt>
                 <dd>{formatMoneyDecimal(subtotal.toString())}</dd>
               </div>
               <div className="flex justify-between text-ink-soft">
                 <dt>Delivery</dt>
-                <dd className="text-muted">Calculated at checkout</dd>
+                <dd className="text-muted">{copy.cart.delivery}</dd>
               </div>
               <div className="flex justify-between border-t border-line pt-3 text-base font-semibold text-forest-900">
-                <dt>Total</dt>
+                <dt>{copy.cart.total}</dt>
                 <dd>{formatMoneyDecimal(subtotal.toString())}</dd>
               </div>
             </dl>
 
             <Button asChild className="mt-5 w-full" size="lg" disabled={items.length === 0}>
               <Link href="/checkout">
-                Checkout
+                {copy.cart.checkout}
                 <ArrowRight className="size-4" />
               </Link>
             </Button>
@@ -93,11 +101,11 @@ export default async function CartPage() {
             <ul className="mt-5 space-y-2 text-xs text-muted">
               <li className="flex items-start gap-2">
                 <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-gold-600" />
-                Card payments are handled by PayHere. We never see your card details.
+                {copy.cart.securityNote}
               </li>
               <li className="flex items-start gap-2">
                 <Truck className="mt-0.5 size-3.5 shrink-0 text-gold-600" />
-                Delivery options and rates are confirmed before payment.
+                {copy.cart.deliveryNote}
               </li>
             </ul>
           </div>

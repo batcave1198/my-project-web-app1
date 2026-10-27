@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PolicyPage } from "@/components/store/policy-page";
+import { getSiteCopy } from "@/lib/content";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
@@ -8,12 +9,14 @@ export const metadata: Metadata = {
   alternates: { canonical: "/privacy-policy" },
 };
 
-export default function PrivacyPolicyPage() {
+export default async function PrivacyPolicyPage() {
+  const copy = await getSiteCopy();
+
   return (
     <PolicyPage
-      title="Privacy Policy"
-      description="How we collect, use and protect personal information is being documented and reviewed before publication."
-      contactPrompt="For a privacy question about your account or an order, contact us and we will respond directly."
+      title={copy.policies.privacy.title}
+      description={copy.policies.privacy.description}
+      contactPrompt={copy.policies.privacy.contact}
     />
   );
 }

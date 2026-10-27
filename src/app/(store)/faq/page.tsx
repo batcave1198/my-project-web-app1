@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronDown, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getSiteCopy } from "@/lib/content";
 import { db } from "@/lib/db";
 
 export const metadata: Metadata = {
@@ -12,35 +13,37 @@ export const metadata: Metadata = {
 };
 
 export default async function FaqPage() {
-  const categories = await db.faqCategory
-    .findMany({
-      where: { isActive: true },
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        items: {
-          where: { isActive: true },
-          orderBy: [{ sortOrder: "asc" }, { question: "asc" }],
-          select: { id: true, question: true, answer: true },
+  const [categories, copy] = await Promise.all([
+    db.faqCategory
+      .findMany({
+        where: { isActive: true },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          items: {
+            where: { isActive: true },
+            orderBy: [{ sortOrder: "asc" }, { question: "asc" }],
+            select: { id: true, question: true, answer: true },
+          },
         },
-      },
-    })
-    .catch(() => []);
+      })
+      .catch(() => []),
+    getSiteCopy(),
+  ]);
 
   const populated = categories.filter((category) => category.items.length > 0);
 
   return (
     <div className="container-narrow py-14 sm:py-18">
       <div className="text-center">
-        <p className="eyebrow">Help centre</p>
+        <p className="eyebrow">{copy.faq.hero.eyebrow}</p>
         <h1 className="mt-2 text-3xl font-semibold text-forest-900 sm:text-4xl">
-          Frequently asked questions
+          {copy.faq.hero.title}
         </h1>
         <p className="mx-auto mt-3 max-w-lg text-base leading-relaxed text-muted">
-          Everything below is managed in the admin dashboard, so the answers stay
-          current with how the store actually operates.
+          {copy.faq.hero.body}
         </p>
       </div>
 
@@ -48,14 +51,13 @@ export default async function FaqPage() {
         <div className="mt-10 rounded-xl border border-dashed border-line-strong bg-white/60 px-6 py-14 text-center">
           <HelpCircle aria-hidden="true" className="mx-auto size-9 text-gold-600" />
           <h2 className="mt-4 text-xl font-semibold text-forest-900">
-            No questions published yet
+            {copy.faq.empty.title}
           </h2>
           <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">
-            FAQ entries added in the admin dashboard appear here. In the
-            meantime, send us a question and we will answer it directly.
+            {copy.faq.empty.body}
           </p>
           <Button asChild className="mt-6">
-            <Link href="/contact">Ask a question</Link>
+            <Link href="/contact">{copy.faq.empty.action}</Link>
           </Button>
         </div>
       ) : (
@@ -90,12 +92,12 @@ export default async function FaqPage() {
       )}
 
       <div className="mt-12 rounded-lg border border-line bg-cream-100/60 p-6 text-center">
-        <p className="font-semibold text-forest-900">Still stuck?</p>
+        <p className="font-semibold text-forest-900">{copy.faq.footer.title}</p>
         <p className="mt-1 text-sm text-muted">
-          Send us a message and we will reply by email.
+          {copy.faq.footer.body}
         </p>
         <Button asChild variant="outline" className="mt-4">
-          <Link href="/contact">Contact support</Link>
+          <Link href="/contact">{copy.faq.footer.action}</Link>
         </Button>
       </div>
     </div>

@@ -5,6 +5,7 @@ import { ReviewForm } from "@/components/reviews/review-form";
 import { ReviewGallery } from "@/components/reviews/review-gallery";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/auth/dal";
+import { getSiteCopy } from "@/lib/content";
 import { db } from "@/lib/db";
 
 export const metadata: Metadata = {
@@ -17,7 +18,7 @@ export const metadata: Metadata = {
 export default async function ReviewsPage() {
   const user = await getCurrentUser();
 
-  const [reviews, products] = await Promise.all([
+  const [reviews, products, copy] = await Promise.all([
     db.review.findMany({
       where: { status: "APPROVED" },
       orderBy: { createdAt: "desc" },
@@ -46,6 +47,7 @@ export default async function ReviewsPage() {
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
+    getSiteCopy(),
   ]);
 
   const items = reviews.map((review) => ({
@@ -77,13 +79,12 @@ export default async function ReviewsPage() {
     <div className="container-page py-12 sm:py-16">
       <div className="grid items-end gap-6 border-b border-line pb-8 lg:grid-cols-[1fr_auto]">
         <div>
-          <p className="eyebrow">Customer stories</p>
+          <p className="eyebrow">{copy.reviews.hero.eyebrow}</p>
           <h1 className="mt-2 text-3xl font-semibold text-forest-900 sm:text-4xl">
-            Reviews from our kitchen
+            {copy.reviews.hero.title}
           </h1>
           <p className="mt-3 max-w-2xl text-base leading-relaxed text-ink-soft">
-            Real ratings, honest words and customer photos. Reviews are checked
-            by our team before they are published.
+            {copy.reviews.hero.body}
           </p>
           {items.length > 0 && (
             <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-muted">
@@ -99,7 +100,7 @@ export default async function ReviewsPage() {
           )}
         </div>
         <Button asChild>
-          <a href="#write-review">Share your review</a>
+          <a href="#write-review">{copy.reviews.hero.action}</a>
         </Button>
       </div>
 
@@ -107,11 +108,10 @@ export default async function ReviewsPage() {
         <div className="mt-10 rounded-lg border border-dashed border-line-strong bg-white px-6 py-16 text-center">
           <MessageSquare className="mx-auto size-9 text-gold-600" />
           <h2 className="mt-3 text-base font-semibold text-forest-900">
-            No reviews published yet
+            {copy.reviews.empty.title}
           </h2>
           <p className="mx-auto mt-1 max-w-md text-sm text-muted">
-            Be the first to share what you made with a Ceylon Herbs product.
-            Approved reviews appear here with your photos.
+            {copy.reviews.empty.body}
           </p>
         </div>
       ) : (
@@ -124,26 +124,22 @@ export default async function ReviewsPage() {
 
       <section className="mt-14 grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
         <div>
-          <p className="eyebrow">Add your experience</p>
+          <p className="eyebrow">{copy.reviews.form.eyebrow}</p>
           <h2 className="mt-2 text-2xl font-semibold text-forest-900">
-            Tell other cooks what you think
+            {copy.reviews.form.title}
           </h2>
           <p className="mt-3 text-sm leading-relaxed text-ink-soft">
-            Choose the product you bought, give it one to five stars and add up
-            to four photos. Your review is sent to our team for approval before
-            it appears on the storefront.
+            {copy.reviews.form.body}
           </p>
           <p className="mt-4 text-xs leading-relaxed text-muted">
-            By submitting a review you confirm it reflects your own experience.
-            Reviews that contain personal information, unrelated links or
-            abusive language are not published.
+            {copy.reviews.form.note}
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Button asChild variant="outline">
-              <Link href="/shop">Browse products</Link>
+              <Link href="/shop">{copy.reviews.form.browse}</Link>
             </Button>
             <Button asChild variant="ghost">
-              <Link href="/gallery">View photo gallery</Link>
+              <Link href="/gallery">{copy.reviews.form.gallery}</Link>
             </Button>
           </div>
         </div>

@@ -4,6 +4,7 @@ import { ArrowRight, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StandbyPage } from "@/components/store/standby-page";
 import { getCurrentUser } from "@/lib/auth/dal";
+import { getSiteCopy } from "@/lib/content";
 
 export const metadata: Metadata = {
   title: "Wishlist",
@@ -11,29 +12,31 @@ export const metadata: Metadata = {
 };
 
 export default async function WishlistPage() {
-  const user = await getCurrentUser();
+  const [user, copy] = await Promise.all([getCurrentUser(), getSiteCopy()]);
 
   return (
     <StandbyPage
-      eyebrow="Saved items"
-      title={user ? "Your wishlist is empty" : "Sign in to save products"}
-      description="Wishlists are tied to your account so they follow you between devices. The feature is enabled together with the product catalogue."
+      eyebrow={copy.wishlist.eyebrow}
+      title={
+        user ? copy.wishlist.signedInTitle : copy.wishlist.signedOutTitle
+      }
+      description={copy.wishlist.body}
       icon={Heart}
     >
       {user ? (
         <Button asChild>
           <Link href="/shop">
-            Browse products
+            {copy.wishlist.browse}
             <ArrowRight aria-hidden="true" />
           </Link>
         </Button>
       ) : (
         <div className="flex flex-col justify-center gap-3 sm:flex-row">
           <Button asChild>
-            <Link href="/login?next=%2Fwishlist">Sign in</Link>
+            <Link href="/login?next=%2Fwishlist">{copy.wishlist.signIn}</Link>
           </Button>
           <Button asChild variant="outline">
-            <Link href="/register">Create an account</Link>
+            <Link href="/register">{copy.wishlist.register}</Link>
           </Button>
         </div>
       )}

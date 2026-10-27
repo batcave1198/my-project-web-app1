@@ -3,6 +3,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { Clock, Mail, MapPin, MessageCircle, Phone } from "lucide-react";
 import { ContactForm } from "@/components/store/contact-form";
+import { SocialLinks } from "@/components/layout/social-links";
+import { getSiteCopy, getSocialLinks } from "@/lib/content";
 import { formatAddress, getStoreSettings } from "@/lib/settings";
 
 export const metadata: Metadata = {
@@ -13,7 +15,11 @@ export const metadata: Metadata = {
 };
 
 export default async function ContactPage() {
-  const settings = await getStoreSettings();
+  const [settings, copy, social] = await Promise.all([
+    getStoreSettings(),
+    getSiteCopy(),
+    getSocialLinks(),
+  ]);
   const address = formatAddress(settings);
   const hasDetails = Boolean(
     settings.storeEmail ||
@@ -22,6 +28,7 @@ export default async function ContactPage() {
       address ||
       settings.businessHours,
   );
+  const hasSocial = Object.values(social).some(Boolean);
 
   return (
     <div>
@@ -39,16 +46,15 @@ export default async function ContactPage() {
         </div>
         <div className="container-page relative py-12 sm:py-16">
           <div className="max-w-2xl">
-            <p className="eyebrow text-gold-300">Contact</p>
+            <p className="eyebrow text-gold-300">{copy.contact.hero.eyebrow}</p>
             <h1 className="mt-2 text-3xl font-semibold text-cream-50 sm:text-4xl">
-              Talk to us
+              {copy.contact.hero.title}
             </h1>
             <p className="mt-3 text-base leading-relaxed text-cream-200/90">
-              Questions about a product, a bulk order or an existing purchase? Send a
-              message and it goes straight to the store&rsquo;s inbox.
+              {copy.contact.hero.body}
             </p>
             <p className="mt-3 text-base leading-relaxed text-cream-200/80">
-              Whether you need help choosing the right spice for your recipe or want to enquire about larger quantities, we are happy to help.
+              {copy.contact.hero.bodySecondary}
             </p>
           </div>
         </div>
@@ -59,7 +65,7 @@ export default async function ContactPage() {
       <div className="mt-10 grid gap-8 lg:grid-cols-[0.8fr_1.2fr]">
         <aside className="rounded-lg border border-line bg-cream-100/60 p-6">
           <h2 className="text-lg font-semibold text-forest-900">
-            Store details
+            {copy.contact.details.title}
           </h2>
 
           {hasDetails ? (
@@ -123,29 +129,36 @@ export default async function ContactPage() {
             </address>
           ) : (
             <p className="mt-3 text-sm leading-relaxed text-muted">
-              Direct phone and email details have not been published yet. The
-              form reaches the same inbox, so please use it in the meantime.
+              {copy.contact.details.empty}
             </p>
           )}
 
           <div className="mt-6 border-t border-line pt-5 text-sm">
-            <p className="font-medium text-forest-900">Looking for a quick answer?</p>
+            <p className="font-medium text-forest-900">
+              {copy.contact.details.quickTitle}
+            </p>
             <p className="mt-1 text-muted">
-              The{" "}
               <Link href="/faq" className="link-underline font-medium text-forest-900">
                 FAQ
               </Link>{" "}
-              covers delivery, returns and account questions.
+              — {copy.contact.details.quickBody}
             </p>
           </div>
+
+          {hasSocial && (
+            <div className="mt-6 border-t border-line pt-5">
+              <p className="text-sm font-medium text-forest-900">Follow us</p>
+              <SocialLinks links={social} tone="dark" className="mt-3" />
+            </div>
+          )}
         </aside>
 
         <div className="rounded-lg border border-line bg-white p-6 sm:p-8">
           <h2 className="text-lg font-semibold text-forest-900">
-            Send a message
+            {copy.contact.form.title}
           </h2>
           <p className="mt-1 mb-6 text-sm text-muted">
-            All fields marked required must be completed.
+            {copy.contact.form.body}
           </p>
           <ContactForm />
         </div>

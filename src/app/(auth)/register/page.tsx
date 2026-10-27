@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { RegisterForm } from "@/components/auth/register-form";
 import { getCurrentUser } from "@/lib/auth/dal";
+import { getSiteCopy } from "@/lib/content";
 
 export const metadata: Metadata = {
   title: "Create Account",
@@ -16,15 +17,16 @@ export default async function RegisterPage() {
     redirect(user.role === "CUSTOMER" ? "/account" : "/admin");
   }
 
+  const copy = await getSiteCopy();
+
   return (
     <div>
-      <p className="eyebrow">Account</p>
+      <p className="eyebrow">{copy.auth.register.eyebrow}</p>
       <h1 className="mt-2 text-3xl font-semibold text-forest-900 sm:text-4xl">
-        Create your account
+        {copy.auth.register.title}
       </h1>
       <p className="mt-2 mb-8 text-sm leading-relaxed text-muted">
-        Save delivery details, follow your orders and build a wishlist. You can
-        still check out as a guest.
+        {copy.auth.register.body}
       </p>
 
       <RegisterForm />

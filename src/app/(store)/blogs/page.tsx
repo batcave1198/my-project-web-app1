@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, BookOpen, Film, ImageIcon, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getSiteCopy } from "@/lib/content";
 import { db } from "@/lib/db";
 
 export const metadata: Metadata = {
@@ -17,31 +18,33 @@ function formatDate(value: Date) {
 }
 
 export default async function BlogsPage() {
-  const posts = await db.blogPost.findMany({
-    where: { isPublished: true },
-    orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
-    include: {
-      _count: { select: { products: true } },
-    },
-  });
+  const [posts, copy] = await Promise.all([
+    db.blogPost.findMany({
+      where: { isPublished: true },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+      include: {
+        _count: { select: { products: true } },
+      },
+    }),
+    getSiteCopy(),
+  ]);
 
   return (
     <div className="container-page py-12 sm:py-16">
       <div className="grid items-end gap-6 border-b border-line pb-8 lg:grid-cols-[1fr_auto]">
         <div>
-          <p className="eyebrow">From our kitchen</p>
+          <p className="eyebrow">{copy.blogs.hero.eyebrow}</p>
           <h1 className="mt-2 text-3xl font-semibold text-forest-900 sm:text-4xl">
-            Blogs & Recipes
+            {copy.blogs.hero.title}
           </h1>
           <p className="mt-3 max-w-2xl text-base leading-relaxed text-ink-soft">
-            Recipes, serving ideas and stories built around Sri Lankan herbs and
-            spices. Each post can be linked to the products used in the recipe.
+            {copy.blogs.hero.body}
           </p>
         </div>
         <Button asChild variant="outline">
           <Link href="/reviews">
             <Star className="size-4" />
-            Customer reviews
+            {copy.blogs.hero.action}
           </Link>
         </Button>
       </div>
@@ -50,13 +53,13 @@ export default async function BlogsPage() {
         <div className="mt-10 rounded-lg border border-dashed border-line-strong bg-white px-6 py-16 text-center">
           <BookOpen className="mx-auto size-9 text-gold-600" />
           <h2 className="mt-3 text-base font-semibold text-forest-900">
-            No stories published yet
+            {copy.blogs.empty.title}
           </h2>
           <p className="mx-auto mt-1 max-w-md text-sm text-muted">
-            Recipes and stories will appear here as soon as they are published.
+            {copy.blogs.empty.body}
           </p>
           <Button asChild variant="outline" className="mt-5">
-            <Link href="/shop">Browse the shop</Link>
+            <Link href="/shop">{copy.blogs.empty.action}</Link>
           </Button>
         </div>
       ) : (

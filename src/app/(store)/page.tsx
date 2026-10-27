@@ -12,12 +12,18 @@ import {
 import { Button } from "@/components/ui/button";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { NewsletterForm } from "@/components/store/newsletter-form";
+import { HomeGalleryVideo } from "@/components/store/home-gallery-video";
 import { db } from "@/lib/db";
-import { siteConfig } from "@/lib/site";
+import { getSiteCopy } from "@/lib/content";
+import { isDirectVideo } from "@/lib/gallery";
 import { formatMoneyDecimal } from "@/lib/money";
 
+const heroStatIcons = [ShieldCheck, ClipboardList, BadgeCheck];
+
 export default async function HomePage() {
-  const [categories, featuredProducts, newProducts] = await Promise.all([
+  const copy = await getSiteCopy();
+  const [categories, featuredProducts, newProducts, homeVideo] =
+    await Promise.all([
     db.category
       .findMany({
         where: { isActive: true, parentId: null },
@@ -73,7 +79,31 @@ export default async function HomePage() {
         },
       })
       .catch(() => []),
+    db.galleryItem
+      .findFirst({
+        where: {
+          mediaType: "VIDEO",
+          isPublished: true,
+          showOnHome: true,
+          videoUrl: { not: null },
+        },
+        orderBy: [{ sortOrder: "asc" }, { updatedAt: "desc" }],
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          videoUrl: true,
+          thumbnailUrl: true,
+          homeCaption: true,
+        },
+      })
+      .catch(() => null),
   ]);
+
+  const featuredVideo =
+    homeVideo?.videoUrl && isDirectVideo(homeVideo.videoUrl)
+      ? homeVideo
+      : null;
 
   return (
     <>
@@ -153,28 +183,31 @@ export default async function HomePage() {
         </div>
 
         <div className="container-page relative py-16 lg:py-24">
-          <div className="max-w-2xl">
+          <div
+            className={
+              featuredVideo
+                ? "grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(320px,35vw)] lg:items-center"
+                : ""
+            }
+          >
+            <div className="max-w-2xl">
             <p className="inline-flex items-center gap-2 rounded-full border border-gold-500/40 bg-cream-50/80 px-3.5 py-1.5 text-[0.7rem] font-semibold tracking-[0.16em] text-earth-600 uppercase shadow-[0_1px_0_rgb(201_162_39/0.12)]">
               <Leaf aria-hidden="true" className="size-3.5 text-gold-600" />
-              Pure Ceylon herbs &amp; spices
+              {copy.home.hero.eyebrow}
             </p>
 
             <h1 className="mt-6 text-[2.65rem] leading-[1.1] font-semibold tracking-[-0.025em] text-forest-900 sm:text-[3.5rem] lg:text-[4.25rem]">
-              The island&rsquo;s finest pantry,
+              {copy.home.hero.titleTop}
               <span className="mt-1.5 block pb-1 text-earth-700 italic">
-                brought to yours.
+                {copy.home.hero.titleAccent}
               </span>
             </h1>
 
             <p className="mt-6 max-w-lg text-lg leading-relaxed text-ink-soft">
-              {siteConfig.name} is a home for Ceylon cinnamon, whole spices,
-              dried herbs and herbal teas — each product described honestly,
-              with its origin, ingredients and packing details in plain sight.
+              {copy.home.hero.body}
             </p>
             <p className="mt-4 max-w-lg text-base leading-relaxed text-ink-soft">
-              Sourced from Sri Lanka and packed with care, our collection brings
-              the true aroma and character of Ceylon spices straight to your
-              kitchen.
+              {copy.home.hero.bodySecondary}
             </p>
 
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
@@ -184,49 +217,49 @@ export default async function HomePage() {
                 className="shadow-[0_10px_40px_-20px_rgb(20_33_26)]"
               >
                 <Link href="/shop">
-                  Shop the collection
+                  {copy.home.hero.primaryCta}
                   <ArrowRight aria-hidden="true" />
                 </Link>
               </Button>
               <Button asChild size="lg" variant="outline">
-                <Link href="/about">Our story</Link>
+                <Link href="/about">{copy.home.hero.secondaryCta}</Link>
               </Button>
             </div>
 
             <dl className="mt-10 grid max-w-lg grid-cols-1 gap-4 border-t border-line pt-6 sm:grid-cols-3">
-              {[
-                {
-                  icon: ShieldCheck,
-                  title: "Secure checkout",
-                  copy: "Payments verified server-side",
-                },
-                {
-                  icon: ClipboardList,
-                  title: "Order tracking",
-                  copy: "Follow every stage",
-                },
-                {
-                  icon: BadgeCheck,
-                  title: "Clear details",
-                  copy: "Ingredients & origin listed",
-                },
-              ].map((item) => (
-                <div key={item.title} className="flex items-start gap-2.5">
-                  <item.icon
-                    aria-hidden="true"
-                    className="mt-0.5 size-4 shrink-0 text-gold-600"
-                  />
-                  <div>
-                    <dt className="text-sm font-semibold text-forest-900">
-                      {item.title}
-                    </dt>
-                    <dd className="mt-0.5 text-xs leading-snug text-ink-soft">
-                      {item.copy}
-                    </dd>
+              {copy.home.hero.stats.map((item, index) => {
+                const Icon = heroStatIcons[index] ?? ShieldCheck;
+                return (
+                  <div key={`${item.title}-${index}`} className="flex items-start gap-2.5">
+                    <Icon
+                      aria-hidden="true"
+                      className="mt-0.5 size-4 shrink-0 text-gold-600"
+                    />
+                    <div>
+                      <dt className="text-sm font-semibold text-forest-900">
+                        {item.title}
+                      </dt>
+                      <dd className="mt-0.5 text-xs leading-snug text-ink-soft">
+                        {item.copy}
+                      </dd>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </dl>
+            </div>
+
+            {featuredVideo && (
+              <div className="lg:justify-self-end">
+                <HomeGalleryVideo
+                  title={featuredVideo.title}
+                  caption={featuredVideo.homeCaption}
+                  description={featuredVideo.description}
+                  videoUrl={featuredVideo.videoUrl!}
+                  thumbnailUrl={featuredVideo.thumbnailUrl}
+                />
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -238,13 +271,13 @@ export default async function HomePage() {
       >
         <div className="container-page">
           <SectionHeading
-            eyebrow="Browse the pantry"
-            title="Every shelf of a Sri Lankan kitchen"
-            description="Categories are managed from the admin dashboard, so this list always reflects what the store actually carries."
+            eyebrow={copy.home.categories.eyebrow}
+            title={copy.home.categories.title}
+            description={copy.home.categories.description}
             action={
               <Button asChild variant="outline" size="sm">
                 <Link href="/categories">
-                  All categories
+                  {copy.home.categories.action}
                   <ArrowRight aria-hidden="true" />
                 </Link>
               </Button>
@@ -258,11 +291,10 @@ export default async function HomePage() {
                 className="mx-auto size-8 text-gold-600"
               />
               <h3 className="mt-4 text-xl font-semibold text-forest-900">
-                The first collection is being prepared
+                {copy.home.categories.emptyTitle}
               </h3>
               <p className="mx-auto mt-2 max-w-md text-sm text-muted">
-                Categories added in the admin dashboard will appear here
-                automatically. Nothing is hardcoded into the storefront.
+                {copy.home.categories.emptyCopy}
               </p>
             </div>
           ) : (
@@ -355,13 +387,13 @@ export default async function HomePage() {
             {featuredProducts.length > 0 && (
               <div>
                 <SectionHeading
-                  eyebrow="Hand-picked for the pantry"
-                  title="Featured products"
-                  description="A curated selection of our most-loved Ceylon herbs and spices."
+                  eyebrow={copy.home.featured.eyebrow}
+                  title={copy.home.featured.title}
+                  description={copy.home.featured.description}
                   action={
                     <Button asChild variant="outline" size="sm">
                       <Link href="/shop">
-                        View all
+                        {copy.home.featured.action}
                         <ArrowRight aria-hidden="true" />
                       </Link>
                     </Button>
@@ -438,13 +470,13 @@ export default async function HomePage() {
             {newProducts.length > 0 && (
               <div>
                 <SectionHeading
-                  eyebrow="Fresh from the pantry"
-                  title="New arrivals"
-                  description="Recently added products, pulled straight from the catalogue."
+                  eyebrow={copy.home.newArrivals.eyebrow}
+                  title={copy.home.newArrivals.title}
+                  description={copy.home.newArrivals.description}
                   action={
                     <Button asChild variant="outline" size="sm">
                       <Link href="/shop?sort=newest">
-                        Shop newest
+                        {copy.home.newArrivals.action}
                         <ArrowRight aria-hidden="true" />
                       </Link>
                     </Button>
@@ -521,34 +553,22 @@ export default async function HomePage() {
         <div className="container-page grid gap-12 py-18 sm:py-24 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
           <div>
             <p className="text-[0.7rem] font-semibold tracking-[0.2em] text-gold-300 uppercase">
-              Why Ceylon
+              {copy.home.story.eyebrow}
             </p>
             <h2
               id="story-heading"
               className="mt-3 text-3xl leading-tight font-semibold sm:text-4xl"
             >
-              Spices with a place name,
-              <br />
-              not just a label.
+              {copy.home.story.title}
             </h2>
           </div>
           <div className="space-y-5 text-base leading-relaxed text-cream-200/80">
-            <p>
-              Ceylon cinnamon is named after the island it comes from. The same
-              is true of the pepper, cardamom, cloves, turmeric and ginger that
-              fill Sri Lankan kitchens — each with a character shaped by where
-              it grows.
-            </p>
-            <p>
-              Our aim is simple: describe every product accurately, publish the
-              details a buyer actually needs, and let the spice speak for
-              itself. Where a detail is not verified, we leave it out rather
-              than dress it up.
-            </p>
+            <p>{copy.home.story.body}</p>
+            <p>{copy.home.story.bodySecondary}</p>
             <div className="pt-2">
               <Button asChild variant="gold" size="md">
                 <Link href="/about">
-                  Read our story
+                  {copy.home.story.cta}
                   <ArrowRight aria-hidden="true" />
                 </Link>
               </Button>
@@ -604,46 +624,24 @@ export default async function HomePage() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-[0.7rem] font-semibold tracking-[0.2em] text-gold-300 uppercase">
-                Icons of Ceylon
+                {copy.home.highlights.eyebrow}
               </p>
               <h2 className="mt-2 text-3xl font-semibold sm:text-4xl">
-                Spice highlights
+                {copy.home.highlights.title}
               </h2>
               <p className="mt-2 max-w-2xl text-sm leading-relaxed text-cream-200/75">
-                Time-honoured Sri Lankan staples — cinnamon, pepper, cloves and
-                cardamom. Browse them directly from the shop.
+                {copy.home.highlights.description}
               </p>
             </div>
             <Button asChild variant="gold" size="sm">
               <Link href="/shop">
-                Browse all spices
+                {copy.home.highlights.action}
                 <ArrowRight aria-hidden="true" />
               </Link>
             </Button>
           </div>
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              {
-                name: "Ceylon Cinnamon",
-                slug: "ceylon-cinnamon",
-                description: "Sweet, warm and delicately fragrant.",
-              },
-              {
-                name: "Black Pepper",
-                slug: "black-pepper",
-                description: "Bold, earthy heat for everyday cooking.",
-              },
-              {
-                name: "Cloves",
-                slug: "cloves",
-                description: "Rich, aromatic and deeply warm.",
-              },
-              {
-                name: "Cardamom",
-                slug: "cardamom",
-                description: "Floral, sweet and distinctly Ceylon.",
-              },
-            ].map((item) => (
+            {copy.home.highlights.items.map((item) => (
               <Link
                 key={item.name}
                 href={`/shop?search=${encodeURIComponent(item.name)}`}
@@ -679,46 +677,33 @@ export default async function HomePage() {
         <div className="container-page">
           <SectionHeading
             align="center"
-            eyebrow="How we sell"
-            title="A straightforward shopping experience"
+            eyebrow={copy.home.values.eyebrow}
+            title={copy.home.values.title}
           />
 
           <div className="mt-12 grid gap-5 md:grid-cols-3">
-            {[
-              {
-                icon: ShieldCheck,
-                title: "Server-verified payments",
-                copy: "Orders are only marked paid after the payment gateway confirms the transaction server-side.",
-              },
-              {
-                icon: ClipboardList,
-                title: "Order tracking that works",
-                copy: "Guest and account orders both get a tracked timeline from confirmation through delivery.",
-              },
-              {
-                icon: BadgeCheck,
-                title: "Details before you buy",
-                copy: "Ingredients, origin, packing, storage and usage notes are shown on every product where provided.",
-              },
-            ].map((item) => (
-              <div
-                key={item.title}
-                className="rounded-lg border border-line bg-white p-7 shadow-[0_1px_0_rgb(20_33_26/0.03)]"
-              >
-                <span className="inline-flex size-11 items-center justify-center rounded-full bg-forest-900/6">
-                  <item.icon
-                    aria-hidden="true"
-                    className="size-5 text-forest-800"
-                  />
-                </span>
-                <h3 className="mt-5 text-lg font-semibold text-forest-900">
-                  {item.title}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted">
-                  {item.copy}
-                </p>
-              </div>
-            ))}
+            {copy.home.values.items.map((item, index) => {
+              const Icon = heroStatIcons[index] ?? ShieldCheck;
+              return (
+                <div
+                  key={`${item.title}-${index}`}
+                  className="rounded-lg border border-line bg-white p-7 shadow-[0_1px_0_rgb(20_33_26/0.03)]"
+                >
+                  <span className="inline-flex size-11 items-center justify-center rounded-full bg-forest-900/6">
+                    <Icon
+                      aria-hidden="true"
+                      className="size-5 text-forest-800"
+                    />
+                  </span>
+                  <h3 className="mt-5 text-lg font-semibold text-forest-900">
+                    {item.title}
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed text-muted">
+                    {item.copy}
+                  </p>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -728,11 +713,10 @@ export default async function HomePage() {
         <div className="container-page grid gap-8 lg:grid-cols-2 lg:items-center">
           <div>
             <h2 className="text-2xl font-semibold text-forest-900 sm:text-3xl">
-              New arrivals and seasonal offers
+              {copy.home.newsletter.title}
             </h2>
             <p className="mt-2 max-w-lg text-sm leading-relaxed text-muted">
-              Occasional emails about new spices, gift packs and discounts. No
-              daily noise, and you can unsubscribe at any time.
+              {copy.home.newsletter.body}
             </p>
           </div>
           <NewsletterForm />

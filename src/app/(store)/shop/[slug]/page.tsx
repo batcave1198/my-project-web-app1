@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { serializeJsonLd } from "@/lib/json-ld";
 import { formatMoneyDecimal, STORE_CURRENCY } from "@/lib/money";
 import { getCurrentUser } from "@/lib/auth/dal";
+import { getSiteCopy } from "@/lib/content";
 import { ProductPurchasePanel } from "@/components/store/product-purchase-panel";
 import { ReviewForm } from "@/components/reviews/review-form";
 import { ReviewGallery } from "@/components/reviews/review-gallery";
@@ -59,6 +60,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
   if (!product || product.status !== "PUBLISHED") notFound();
 
+  const copy = await getSiteCopy();
   const currentUser = await getCurrentUser();
   const reviews = await db.review.findMany({
     where: { productId: product.id, status: "APPROVED" },
@@ -195,7 +197,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                   href="#reviews"
                   className="text-xs font-medium text-muted hover:text-forest-900 hover:underline"
                 >
-                  Be the first to review this product
+                  {copy.product.beFirstReview}
                 </a>
               )}
             </div>
@@ -229,7 +231,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-[0.65rem] font-bold tracking-[0.14em] text-earth-700 uppercase">
-                  Recipe & story
+                  {copy.product.recipeStory}
                 </span>
                 <span className="block truncate text-sm font-semibold text-forest-900 group-hover:underline">
                   {product.blogPost.title}
@@ -240,8 +242,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           )}
 
           <div className="rounded-lg border border-line bg-cream-100/40 p-4 text-sm text-muted">
-            <p className="font-medium text-forest-900">Delivery</p>
-            <p className="mt-1">Delivery rates are calculated at checkout based on your district.</p>
+            <p className="font-medium text-forest-900">{copy.product.deliveryTitle}</p>
+            <p className="mt-1">{copy.product.deliveryBody}</p>
           </div>
         </div>
       </div>
@@ -250,13 +252,13 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         <div className="mt-12 grid gap-10 lg:grid-cols-[1.2fr_0.8fr]">
           {product.description && (
             <div>
-              <h2 className="text-xl font-semibold text-forest-900">Description</h2>
+              <h2 className="text-xl font-semibold text-forest-900">{copy.product.descriptionTitle}</h2>
               <div className="prose mt-4 max-w-none text-ink-soft whitespace-pre-line">{product.description}</div>
             </div>
           )}
           {product.specs.length > 0 && (
             <div>
-              <h2 className="text-xl font-semibold text-forest-900">Product details</h2>
+              <h2 className="text-xl font-semibold text-forest-900">{copy.product.detailsTitle}</h2>
               <dl className="mt-4 divide-y divide-line rounded-lg border border-line">
                 {product.specs.map((s) => (
                   <div key={s.id} className="flex items-center justify-between px-4 py-3 text-sm">
@@ -282,9 +284,9 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       >
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="eyebrow">Customer feedback</p>
+            <p className="eyebrow">{copy.product.reviewsEyebrow}</p>
             <h2 className="mt-1 text-2xl font-semibold text-forest-900">
-              Reviews
+              {copy.product.reviewsTitle}
             </h2>
             {product.ratingCount > 0 ? (
               <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted">
@@ -294,23 +296,22 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                   size="md"
                 />
                 <span>
-                  Based on {product.ratingCount} approved review
+                  {copy.product.reviewsBasedOn} {product.ratingCount} approved review
                   {product.ratingCount === 1 ? "" : "s"}
                 </span>
               </div>
             ) : (
               <p className="mt-2 text-sm text-muted">
-                No approved reviews yet. Share your experience with other
-                customers.
+                {copy.product.reviewsEmpty}
               </p>
             )}
           </div>
           <div className="flex flex-wrap gap-2">
             <Button asChild variant="outline">
-              <Link href="/reviews">All customer reviews</Link>
+              <Link href="/reviews">{copy.product.allReviews}</Link>
             </Button>
             <Button asChild>
-              <a href="#write-review">Write a review</a>
+              <a href="#write-review">{copy.product.writeReview}</a>
             </Button>
           </div>
         </div>
@@ -328,10 +329,10 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         ) : (
           <div className="mt-6 rounded-lg border border-dashed border-line-strong bg-cream-100/40 px-5 py-8 text-center">
             <p className="text-sm font-medium text-forest-900">
-              No reviews to show yet
+              {copy.product.noReviewsTitle}
             </p>
             <p className="mt-1 text-xs text-muted">
-              Approved reviews and customer photos will appear here.
+              {copy.product.noReviewsBody}
             </p>
           </div>
         )}
@@ -351,7 +352,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
       {related.length > 0 && (
         <section className="mt-16">
-          <h2 className="text-xl font-semibold text-forest-900">Related products</h2>
+          <h2 className="text-xl font-semibold text-forest-900">{copy.product.relatedTitle}</h2>
           <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {related.map((p) => {
               const img = p.images[0];

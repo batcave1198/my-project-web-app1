@@ -5,6 +5,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireStaff } from "@/lib/auth/dal";
 import { recordAuditLog } from "@/lib/admin/audit";
+import { isDirectVideo } from "@/lib/gallery";
 
 const galleryItemSchema = z
   .object({
@@ -15,6 +16,8 @@ const galleryItemSchema = z
     imageUrl: z.string().trim().optional().or(z.literal("")),
     videoUrl: z.string().trim().optional().or(z.literal("")),
     thumbnailUrl: z.string().trim().optional().or(z.literal("")),
+    showOnHome: z.coerce.boolean().default(false),
+    homeCaption: z.string().trim().max(400).optional().or(z.literal("")),
     sortOrder: z.coerce.number().int().min(0).default(0),
     isPublished: z.coerce.boolean().default(true),
   })
@@ -57,9 +60,9 @@ const galleryItemSchema = z
         ctx.addIssue({
           code: "custom",
           path: ["videoUrl"],
-          message: "Add a YouTube, Vimeo or direct video URL.",
+          message: "Upload a video or add a YouTube, Vimeo or MP4/WebM URL.",
         });
-      } else {
+      } else if (!isLocalMedia(data.videoUrl)) {
         try {
           const url = new URL(data.videoUrl);
           if (!["http:", "https:"].includes(url.protocol)) {
@@ -69,10 +72,35 @@ const galleryItemSchema = z
           ctx.addIssue({
             code: "custom",
             path: ["videoUrl"],
-            message: "Enter a valid http(s) video URL.",
+            message: "Enter a valid http(s) video URL or upload a video file.",
           });
         }
       }
+
+      if (data.showOnHome && data.videoUrl && !isDirectVideo(data.videoUrl)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["showOnHome"],
+          message:
+            "Only uploaded MP4/WebM videos or direct video URLs can be featured on the home page.",
+        });
+      }
+    }
+
+    if (data.mediaType === "IMAGE" && data.showOnHome) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["showOnHome"],
+        message: "Only videos can be featured on the home page.",
+      });
+    }
+
+    if (data.showOnHome && !data.isPublished) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["showOnHome"],
+        message: "Publish the video before featuring it on the home page.",
+      });
     }
   });
 
@@ -100,6 +128,8 @@ export async function saveGalleryItem(
     imageUrl: formData.get("imageUrl") || "",
     videoUrl: formData.get("videoUrl") || "",
     thumbnailUrl: formData.get("thumbnailUrl") || "",
+    showOnHome: formData.get("showOnHome") === "on",
+    homeCaption: formData.get("homeCaption") || "",
     sortOrder: formData.get("sortOrder") || 0,
     isPublished: formData.get("isPublished") === "on",
   });
@@ -126,21 +156,46 @@ export async function saveGalleryItem(
     videoUrl: data.mediaType === "VIDEO" ? emptyToNull(data.videoUrl) : null,
     thumbnailUrl:
       data.mediaType === "VIDEO" ? emptyToNull(data.thumbnailUrl) : null,
+    showOnHome: data.mediaType === "VIDEO" ? data.showOnHome : false,
+    homeCaption:
+      data.mediaType === "VIDEO" ? emptyToNull(data.homeCaption) : null,
     sortOrder: data.sortOrder,
     isPublished: data.isPublished,
   };
 
   try {
-    const saved = data.id
-      ? await db.galleryItem.update({
-          where: { id: data.id },
-          data: payload,
-          select: { id: true, title: true, mediaType: true },
-        })
-      : await db.galleryItem.create({
-          data: payload,
-          select: { id: true, title: true, mediaType: true },
+    const saved = await db.$transaction(async (tx) => {
+      if (payload.showOnHome) {
+        await tx.galleryItem.updateMany({
+          where: {
+            showOnHome: true,
+            ...(data.id ? { id: { not: data.id } } : {}),
+          },
+          data: { showOnHome: false },
         });
+      }
+
+      return data.id
+        ? tx.galleryItem.update({
+            where: { id: data.id },
+            data: payload,
+            select: {
+              id: true,
+              title: true,
+              mediaType: true,
+              showOnHome: true,
+            },
+          })
+        : tx.galleryItem.create({
+            data: payload,
+            select: {
+              id: true,
+              title: true,
+              mediaType: true,
+              showOnHome: true,
+            },
+          });
+    });
 
     await recordAuditLog({
       actorUserId: actor.id,
@@ -151,11 +206,13 @@ export async function saveGalleryItem(
         title: saved.title,
         mediaType: saved.mediaType,
         published: payload.isPublished,
+        showOnHome: saved.showOnHome,
       },
     });
 
     revalidatePath("/admin/gallery");
     revalidatePath("/gallery");
+    revalidatePath("/");
     return { status: "success", message: "Gallery item saved." };
   } catch (error) {
     console.error("[gallery] save failed", error);
@@ -167,7 +224,7 @@ export async function deleteGalleryItem(id: string) {
   const actor = await requireStaff("/admin/gallery");
   const item = await db.galleryItem.findUnique({
     where: { id },
-    select: { title: true, mediaType: true },
+    select: { title: true, mediaType: true, showOnHome: true },
   });
   try {
     await db.galleryItem.delete({ where: { id } });
@@ -176,12 +233,89 @@ export async function deleteGalleryItem(id: string) {
       action: "gallery.delete",
       entityType: "GalleryItem",
       entityId: id,
-      metadata: { title: item?.title ?? null, mediaType: item?.mediaType ?? null },
+      metadata: {
+        title: item?.title ?? null,
+        mediaType: item?.mediaType ?? null,
+        showOnHome: item?.showOnHome ?? false,
+      },
     });
     revalidatePath("/admin/gallery");
     revalidatePath("/gallery");
+    revalidatePath("/");
     return { status: "success" as const };
   } catch {
     return { status: "error" as const, message: "Could not delete this item." };
+  }
+}
+
+export async function setGalleryHomeVideo(id: string, showOnHome: boolean) {
+  const actor = await requireStaff("/admin/gallery");
+  const item = await db.galleryItem.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      title: true,
+      mediaType: true,
+      videoUrl: true,
+      isPublished: true,
+    },
+  });
+
+  if (!item || item.mediaType !== "VIDEO" || !item.videoUrl) {
+    return {
+      status: "error" as const,
+      message: "Only gallery videos can be featured on the home page.",
+    };
+  }
+  if (showOnHome && !item.isPublished) {
+    return {
+      status: "error" as const,
+      message: "Publish the video before featuring it on the home page.",
+    };
+  }
+  if (showOnHome && !isDirectVideo(item.videoUrl)) {
+    return {
+      status: "error" as const,
+      message:
+        "Only uploaded MP4/WebM videos or direct video URLs can be featured on the home page.",
+    };
+  }
+
+  try {
+    await db.$transaction(async (tx) => {
+      if (showOnHome) {
+        await tx.galleryItem.updateMany({
+          where: { showOnHome: true, id: { not: id } },
+          data: { showOnHome: false },
+        });
+      }
+      await tx.galleryItem.update({
+        where: { id },
+        data: { showOnHome },
+      });
+    });
+
+    await recordAuditLog({
+      actorUserId: actor.id,
+      action: "gallery.home_video",
+      entityType: "GalleryItem",
+      entityId: id,
+      metadata: {
+        title: item.title,
+        showOnHome,
+        published: item.isPublished,
+      },
+    });
+
+    revalidatePath("/admin/gallery");
+    revalidatePath("/gallery");
+    revalidatePath("/");
+    return { status: "success" as const };
+  } catch (error) {
+    console.error("[gallery] home video update failed", error);
+    return {
+      status: "error" as const,
+      message: "Could not update the home page video.",
+    };
   }
 }
