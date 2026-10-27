@@ -41,6 +41,11 @@ export async function requireStaff(
   if (!isStaff(user)) {
     redirect("/");
   }
+  if (!user.mfaEnabled) {
+    redirect(
+      `/account/security?required=1&next=${encodeURIComponent(returnTo)}`,
+    );
+  }
   return user;
 }
 
@@ -63,6 +68,6 @@ export async function assertStaff(): Promise<
 > {
   const user = await getCurrentUser();
   if (!user) return { ok: false, status: 401 };
-  if (!isStaff(user)) return { ok: false, status: 403 };
+  if (!isStaff(user) || !user.mfaEnabled) return { ok: false, status: 403 };
   return { ok: true, user };
 }

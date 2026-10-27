@@ -10,10 +10,14 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
   await requireStaff("/admin/products");
   const { id } = await params;
 
-  const [product, categories, brands] = await Promise.all([
+  const [product, categories, brands, blogPosts] = await Promise.all([
     db.product.findUnique({ where: { id }, include: { images: { orderBy: { sortOrder: "asc" } }, videos: true, specs: true, variants: true } }),
     db.category.findMany({ where: { isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
     db.brand.findMany({ where: { isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    db.blogPost.findMany({
+      orderBy: [{ sortOrder: "asc" }, { title: "asc" }],
+      select: { id: true, title: true, isPublished: true },
+    }),
   ]);
 
   if (!product) notFound();
@@ -34,6 +38,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
         }}
         categories={categories}
         brands={brands}
+        blogPosts={blogPosts}
       />
     </div>
   );

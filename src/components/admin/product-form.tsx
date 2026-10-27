@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2, Sparkles, Upload, X } from "lucide-react";
+import { BookOpen, Loader2, Sparkles, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea, FieldError } from "@/components/ui/field";
 import { slugify } from "@/lib/slug";
@@ -18,6 +19,7 @@ type ProductFormProps = {
     sku: string;
     categoryId: string;
     brandId: string | null;
+    blogPostId: string | null;
     status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
     saleMode: "UNIT" | "WEIGHT";
     shortDescription: string | null;
@@ -41,9 +43,15 @@ type ProductFormProps = {
   };
   categories: Array<{ id: string; name: string }>;
   brands: Array<{ id: string; name: string }>;
+  blogPosts: Array<{ id: string; title: string; isPublished: boolean }>;
 };
 
-export function ProductForm({ product, categories, brands }: ProductFormProps) {
+export function ProductForm({
+  product,
+  categories,
+  brands,
+  blogPosts,
+}: ProductFormProps) {
   const router = useRouter();
   const [state, setState] = useState<ProductActionState>(initialState);
   const [pending, startTransition] = useTransition();
@@ -244,6 +252,45 @@ export function ProductForm({ product, categories, brands }: ProductFormProps) {
                 </select>
               </div>
               <p className="text-xs text-muted">Published products appear in the shop.</p>
+            </div>
+          </section>
+
+          <section className="rounded-lg border border-line bg-white p-6">
+            <div className="flex items-center gap-2">
+              <BookOpen className="size-4 text-gold-600" />
+              <h2 className="text-base font-semibold text-forest-900">
+                Recipe / blog
+              </h2>
+            </div>
+            <div className="mt-4">
+              <Label htmlFor="blogPostId">Linked post (optional)</Label>
+              <select
+                id="blogPostId"
+                name="blogPostId"
+                defaultValue={product?.blogPostId ?? ""}
+                className="mt-1.5 block w-full rounded-md border border-line-strong bg-white px-3.5 py-2.5 text-sm"
+              >
+                <option value="">No linked recipe</option>
+                {blogPosts.map((post) => (
+                  <option key={post.id} value={post.id}>
+                    {post.title}
+                    {post.isPublished ? "" : " (draft)"}
+                  </option>
+                ))}
+              </select>
+              <FieldError>{state.fieldErrors?.blogPostId}</FieldError>
+              <p className="mt-1.5 text-xs leading-relaxed text-muted">
+                Optional. The product page will show a recipe callout and the
+                published post will list this product.
+              </p>
+              {blogPosts.length === 0 && (
+                <Link
+                  href="/admin/blogs/new"
+                  className="mt-2 inline-block text-xs font-semibold text-earth-700 hover:underline"
+                >
+                  Create a recipe or blog post
+                </Link>
+              )}
             </div>
           </section>
 

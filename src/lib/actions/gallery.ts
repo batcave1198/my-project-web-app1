@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireStaff } from "@/lib/auth/dal";
+import { recordAuditLog } from "@/lib/admin/audit";
 
 const galleryItemSchema = z
   .object({
@@ -89,7 +90,7 @@ export async function saveGalleryItem(
   _prev: GalleryActionState,
   formData: FormData,
 ): Promise<GalleryActionState> {
-  await requireStaff("/admin/gallery");
+  const actor = await requireStaff("/admin/gallery");
 
   const parsed = galleryItemSchema.safeParse({
     id: formData.get("id") || undefined,
@@ -130,11 +131,28 @@ export async function saveGalleryItem(
   };
 
   try {
-    if (data.id) {
-      await db.galleryItem.update({ where: { id: data.id }, data: payload });
-    } else {
-      await db.galleryItem.create({ data: payload });
-    }
+    const saved = data.id
+      ? await db.galleryItem.update({
+          where: { id: data.id },
+          data: payload,
+          select: { id: true, title: true, mediaType: true },
+        })
+      : await db.galleryItem.create({
+          data: payload,
+          select: { id: true, title: true, mediaType: true },
+        });
+
+    await recordAuditLog({
+      actorUserId: actor.id,
+      action: data.id ? "gallery.update" : "gallery.create",
+      entityType: "GalleryItem",
+      entityId: saved.id,
+      metadata: {
+        title: saved.title,
+        mediaType: saved.mediaType,
+        published: payload.isPublished,
+      },
+    });
 
     revalidatePath("/admin/gallery");
     revalidatePath("/gallery");
@@ -146,9 +164,20 @@ export async function saveGalleryItem(
 }
 
 export async function deleteGalleryItem(id: string) {
-  await requireStaff("/admin/gallery");
+  const actor = await requireStaff("/admin/gallery");
+  const item = await db.galleryItem.findUnique({
+    where: { id },
+    select: { title: true, mediaType: true },
+  });
   try {
     await db.galleryItem.delete({ where: { id } });
+    await recordAuditLog({
+      actorUserId: actor.id,
+      action: "gallery.delete",
+      entityType: "GalleryItem",
+      entityId: id,
+      metadata: { title: item?.title ?? null, mediaType: item?.mediaType ?? null },
+    });
     revalidatePath("/admin/gallery");
     revalidatePath("/gallery");
     return { status: "success" as const };

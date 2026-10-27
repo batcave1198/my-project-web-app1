@@ -22,9 +22,11 @@ export const siteConfig = {
 export const mainNav = [
   { label: "Home", href: "/" },
   { label: "Shop", href: "/shop" },
-  { label: "Gallery", href: "/gallery" },
   { label: "Categories", href: "/categories" },
   { label: "Deals", href: "/deals" },
+  { label: "Gallery", href: "/gallery" },
+  { label: "Reviews", href: "/reviews" },
+  { label: "Blogs", href: "/blogs" },
   { label: "About", href: "/about" },
   { label: "Contact", href: "/contact" },
 ] as const;
@@ -40,6 +42,7 @@ export const footerNav = {
     { label: "My Account", href: "/account" },
     { label: "My Orders", href: "/account/orders" },
     { label: "Wishlist", href: "/wishlist" },
+    { label: "Customer Reviews", href: "/reviews" },
     { label: "Cart", href: "/cart" },
   ],
   help: [
@@ -51,6 +54,7 @@ export const footerNav = {
   company: [
     { label: "About Us", href: "/about" },
     { label: "Gallery", href: "/gallery" },
+    { label: "Blogs & Recipes", href: "/blogs" },
     { label: "Contact Us", href: "/contact" },
   ],
   legal: [

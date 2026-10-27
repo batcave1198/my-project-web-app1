@@ -2,7 +2,7 @@
 // Ceylon Herbs and Spices — database schema
 //
 // Conventions:
-//  * All money is stored as Decimal(12,2) in LKR. Arithmetic happens in
+//  * All money is stored as Decimal(12,2) in USD. Arithmetic happens in
 //    integer cents inside src/lib/money.ts, never in floats.
 //  * Orders keep a full snapshot of every purchased line so product edits can
 //    never rewrite history.
@@ -147,29 +147,36 @@ enum ImportRowStatus {
 // ------------------------------ identity -----------------------------------
 
 model User {
-  id              String    @id @default(cuid())
-  email           String    @unique
-  passwordHash    String
-  name            String
-  phone           String?
-  role            Role      @default(CUSTOMER)
-  isActive        Boolean   @default(true)
-  emailVerifiedAt DateTime?
-  marketingOptIn  Boolean   @default(false)
-  lastLoginAt     DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id               String    @id @default(cuid())
+  email            String    @unique
+  passwordHash     String
+  name             String
+  phone            String?
+  role             Role      @default(CUSTOMER)
+  isActive         Boolean   @default(true)
+  emailVerifiedAt  DateTime?
+  marketingOptIn   Boolean   @default(false)
+  lastLoginAt      DateTime?
+  mfaEnabled       Boolean   @default(false)
+  mfaSecret        String?
+  mfaRecoveryCodes String[]  @default([])
+  mfaEnrolledAt    DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   sessions          Session[]
+  mfaChallenges     MfaChallenge[]
   addresses         Address[]
   orders            Order[]
   reviews           Review[]
+  reviewLikes       ReviewLike[]
   wishlist          WishlistItem[]
   carts             Cart[]
   couponRedemptions CouponRedemption[]
   auditLogs         AuditLog[]
   importJobs        ImportJob[]
   stockMovements    StockMovement[]
+  uploads           UploadAsset[]
 
   @@index([role])
   @@index([createdAt])
@@ -184,6 +191,20 @@ model Session {
   lastUsedAt DateTime @default(now())
   ipAddress  String?
   userAgent  String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model MfaChallenge {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique @db.Char(64)
+  userId    String
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -274,9 +295,9 @@ model Brand {
 }
 
 model Product {
-  id     String        @id @default(cuid())
-  name   String
-  slug   String        @unique
+  id       String          @id @default(cuid())
+  name     String
+  slug     String          @unique
   sku      String          @unique
   status   ProductStatus   @default(DRAFT)
   saleMode ProductSaleMode @default(UNIT)
@@ -286,6 +307,7 @@ model Product {
 
   categoryId String
   brandId    String?
+  blogPostId String?
 
   // UNIT: price and stock are per item / number of items.
   // WEIGHT: price is per 100g and stock is the available weight in grams.
@@ -325,8 +347,9 @@ model Product {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  category Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  brand    Brand?   @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  category Category  @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  brand    Brand?    @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  blogPost BlogPost? @relation(fields: [blogPostId], references: [id], onDelete: SetNull)
 
   images   ProductImage[]
   videos   ProductVideo[]
@@ -345,6 +368,7 @@ model Product {
   @@index([status, createdAt])
   @@index([categoryId])
   @@index([brandId])
+  @@index([blogPostId])
   @@index([salesCount])
 }
 
@@ -428,15 +452,31 @@ model Review {
   body               String
   status             ReviewStatus @default(PENDING)
   isVerifiedPurchase Boolean      @default(false)
+  imageUrls          String[]     @default([])
   adminReply         String?
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
 
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  product Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  likes   ReviewLike[]
 
   @@index([productId, status])
   @@index([status, createdAt])
+}
+
+model ReviewLike {
+  id        String   @id @default(cuid())
+  reviewId  String
+  userId    String
+  createdAt DateTime @default(now())
+
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewId, userId])
+  @@index([reviewId])
+  @@index([userId])
 }
 
 model WishlistItem {
@@ -760,6 +800,24 @@ model Page {
   @@index([isPublished])
 }
 
+model BlogPost {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  excerpt     String?
+  content     String
+  imageUrls   String[] @default([])
+  videoUrl    String?
+  sortOrder   Int      @default(0)
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  products Product[]
+
+  @@index([isPublished, sortOrder])
+}
+
 model GalleryItem {
   id           String           @id @default(cuid())
   title        String?
@@ -835,6 +893,22 @@ model SiteSetting {
 }
 
 // --------------------------- media & operations ----------------------------
+
+model UploadAsset {
+  id        String   @id @default(cuid())
+  userId    String?
+  url       String   @unique
+  folder    String
+  bytes     Int
+  width     Int?
+  height    Int?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([createdAt])
+}
 
 model MediaAsset {
   id        String    @id @default(cuid())

@@ -50,8 +50,8 @@ export async function SiteHeader() {
                   <Link
                     href={item.href}
                     className={cn(
-                      "relative inline-flex h-10 items-center rounded-md px-3 text-sm font-medium text-ink-soft transition-colors hover:text-forest-900",
-                      "after:absolute after:inset-x-3 after:-bottom-0.5 after:h-px after:scale-x-0 after:bg-gold-500 after:transition-transform hover:after:scale-x-100",
+                      "relative inline-flex h-10 items-center rounded-md px-2 text-[0.8rem] font-medium text-ink-soft transition-colors hover:text-forest-900 xl:px-3 xl:text-sm",
+                      "after:absolute after:inset-x-2 after:-bottom-0.5 after:h-px after:scale-x-0 after:bg-gold-500 after:transition-transform hover:after:scale-x-100 xl:after:inset-x-3",
                     )}
                   >
                     {item.label}

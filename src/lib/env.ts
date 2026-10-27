@@ -17,6 +17,12 @@ const envSchema = z.object({
     .string()
     .min(32, "SESSION_SECRET must be at least 32 characters"),
 
+  /** Set to true only when the app is behind a trusted reverse proxy (Nginx). */
+  TRUST_PROXY: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
+
   PAYHERE_MODE: z.enum(["sandbox", "live"]).default("sandbox"),
   PAYHERE_MERCHANT_ID: z.string().optional(),
   PAYHERE_MERCHANT_SECRET: z.string().optional(),

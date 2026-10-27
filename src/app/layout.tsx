@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { connection } from "next/server";
 import localFont from "next/font/local";
 import "./globals.css";
 import { siteConfig } from "@/lib/site";
@@ -73,7 +74,15 @@ export const viewport: Viewport = {
   colorScheme: "light",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  // CSP nonces are generated per request in src/proxy.ts, so every page must
+  // be rendered dynamically to receive the nonce on its scripts.
+  await connection();
+
   return (
     <html lang="en" className={`${dmSans.variable} ${fraunces.variable}`}>
       <body className="min-h-dvh antialiased">

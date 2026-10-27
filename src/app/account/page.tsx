@@ -43,12 +43,18 @@ const links = [
     description: "Your name, phone number and password.",
     icon: UserRound,
   },
+  {
+    href: "/account/security",
+    label: "Security",
+    description: "Verify your email and manage two-factor authentication.",
+    icon: ShieldCheck,
+  },
 ];
 
 export default async function AccountPage({
   searchParams,
 }: {
-  searchParams: Promise<{ welcome?: string }>;
+  searchParams: Promise<{ welcome?: string; verified?: string }>;
 }) {
   const user = await requireUser("/account");
   const params = await searchParams;
@@ -63,6 +69,12 @@ export default async function AccountPage({
       {params.welcome === "1" && (
         <div className="mb-8 rounded-lg border border-success/25 bg-success-soft px-5 py-4 text-sm text-success">
           Welcome to Ceylon Herbs and Spices. Your account is ready.
+        </div>
+      )}
+
+      {params.verified === "1" && (
+        <div className="mb-8 rounded-lg border border-success/25 bg-success-soft px-5 py-4 text-sm text-success">
+          Your email address has been verified.
         </div>
       )}
 
@@ -86,8 +98,13 @@ export default async function AccountPage({
         <div className="mt-6 flex items-start gap-3 rounded-lg border border-warning/25 bg-warning-soft px-5 py-4 text-sm text-warning">
           <ShieldCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
           <p>
-            Your email address is not verified yet. Email verification is enabled
-            once transactional email is configured.
+            Your email address is not verified yet.{" "}
+            <Link
+              href="/account/security"
+              className="font-semibold underline underline-offset-2"
+            >
+              Verify it from your security settings.
+            </Link>
           </p>
         </div>
       )}

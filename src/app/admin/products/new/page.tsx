@@ -8,9 +8,13 @@ export const metadata: Metadata = { title: "New Product" };
 export default async function NewProductPage() {
   await requireStaff("/admin/products");
 
-  const [categories, brands] = await Promise.all([
+  const [categories, brands, blogPosts] = await Promise.all([
     db.category.findMany({ where: { isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
     db.brand.findMany({ where: { isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    db.blogPost.findMany({
+      orderBy: [{ sortOrder: "asc" }, { title: "asc" }],
+      select: { id: true, title: true, isPublished: true },
+    }),
   ]);
 
   return (
@@ -20,7 +24,11 @@ export default async function NewProductPage() {
         <h1 className="mt-1 text-2xl font-semibold text-forest-900">Add product</h1>
         <p className="mt-1 text-sm text-muted">Create a new product for the storefront.</p>
       </div>
-      <ProductForm categories={categories} brands={brands} />
+      <ProductForm
+        categories={categories}
+        brands={brands}
+        blogPosts={blogPosts}
+      />
     </div>
   );
 }

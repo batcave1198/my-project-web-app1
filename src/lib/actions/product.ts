@@ -5,6 +5,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireStaff } from "@/lib/auth/dal";
 import { slugify } from "@/lib/slug";
+import { recordAuditLog } from "@/lib/admin/audit";
 import { Prisma } from "@prisma/client";
 
 const productSchema = z.object({
@@ -14,6 +15,7 @@ const productSchema = z.object({
   sku: z.string().trim().min(2, "SKU is required"),
   categoryId: z.string().min(1, "Category is required"),
   brandId: z.string().optional().or(z.literal("")),
+  blogPostId: z.string().optional().or(z.literal("")),
   status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]),
   saleMode: z.enum(["UNIT", "WEIGHT"]).default("UNIT"),
   shortDescription: z.string().trim().optional().or(z.literal("")),
@@ -88,7 +90,7 @@ export async function saveProduct(
   _prev: ProductActionState,
   formData: FormData,
 ): Promise<ProductActionState> {
-  await requireStaff("/admin/products");
+  const actor = await requireStaff("/admin/products");
 
   const parsed = productSchema.safeParse({
     id: formData.get("id") || undefined,
@@ -97,6 +99,7 @@ export async function saveProduct(
     sku: formData.get("sku"),
     categoryId: formData.get("categoryId"),
     brandId: formData.get("brandId") || "",
+    blogPostId: formData.get("blogPostId") || "",
     status: formData.get("status"),
     saleMode: formData.get("saleMode") || "UNIT",
     shortDescription: formData.get("shortDescription") || "",
@@ -146,16 +149,31 @@ export async function saveProduct(
     sortOrder: index,
   }));
 
+  const blogPostId = emptyToNull(data.blogPostId) as string | null;
+  if (blogPostId) {
+    const postExists = await db.blogPost.count({ where: { id: blogPostId } });
+    if (!postExists) {
+      return {
+        status: "error",
+        fieldErrors: { blogPostId: "Choose a valid blog post." },
+        message: "Please fix the errors below.",
+      };
+    }
+  }
+
   try {
+    let saved: { id: string; name: string; slug: string };
     if (data.id) {
-      await db.product.update({
+      saved = await db.product.update({
         where: { id: data.id },
+        select: { id: true, name: true, slug: true },
         data: {
           name: data.name,
           slug,
           sku: data.sku,
           categoryId: data.categoryId,
           brandId: emptyToNull(data.brandId) as string | null,
+          blogPostId,
           status: data.status,
           saleMode: data.saleMode,
           shortDescription: emptyToNull(data.shortDescription) as string | null,
@@ -188,13 +206,15 @@ export async function saveProduct(
         },
       });
     } else {
-      await db.product.create({
+      saved = await db.product.create({
+        select: { id: true, name: true, slug: true },
         data: {
           name: data.name,
           slug,
           sku: data.sku,
           categoryId: data.categoryId,
           brandId: emptyToNull(data.brandId) as string | null,
+          blogPostId,
           status: data.status,
           saleMode: data.saleMode,
           shortDescription: emptyToNull(data.shortDescription) as string | null,
@@ -225,10 +245,25 @@ export async function saveProduct(
       });
     }
 
+    await recordAuditLog({
+      actorUserId: actor.id,
+      action: data.id ? "product.update" : "product.create",
+      entityType: "Product",
+      entityId: saved.id,
+      metadata: {
+        name: saved.name,
+        sku: data.sku,
+        status: data.status,
+        blogPostId,
+      },
+    });
+
     revalidatePath("/admin/products");
     revalidatePath("/shop");
+    revalidatePath(`/shop/${saved.slug}`);
     revalidatePath("/cart");
     revalidatePath("/");
+    revalidatePath("/blogs");
     return { status: "success", message: "Product saved." };
   } catch (e) {
     console.error(e);
@@ -240,11 +275,27 @@ export async function saveProduct(
 }
 
 export async function deleteProduct(id: string) {
-  await requireStaff("/admin/products");
+  const actor = await requireStaff("/admin/products");
+  const product = await db.product.findUnique({
+    where: { id },
+    select: { name: true, slug: true, sku: true },
+  });
+  if (!product) {
+    return { status: "error" as const, message: "Product not found." };
+  }
+
   try {
     await db.product.delete({ where: { id } });
+    await recordAuditLog({
+      actorUserId: actor.id,
+      action: "product.delete",
+      entityType: "Product",
+      entityId: id,
+      metadata: { name: product.name, sku: product.sku },
+    });
     revalidatePath("/admin/products");
     revalidatePath("/shop");
+    revalidatePath(`/shop/${product.slug}`);
     revalidatePath("/");
     return { status: "success" as const };
   } catch {

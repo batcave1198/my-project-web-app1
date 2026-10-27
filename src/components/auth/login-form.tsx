@@ -78,6 +78,15 @@ export function LoginForm({ next }: { next?: string }) {
         <FieldError id="password-error">{state?.fieldErrors?.password}</FieldError>
       </div>
 
+      <div className="flex justify-end">
+        <Link
+          href="/forgot-password"
+          className="link-underline text-sm font-medium text-forest-900"
+        >
+          Forgot your password?
+        </Link>
+      </div>
+
       <Button type="submit" disabled={pending} className="w-full" size="lg">
         {pending ? (
           <>

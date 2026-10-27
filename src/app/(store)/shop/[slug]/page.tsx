@@ -2,9 +2,16 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowRight, BookOpen } from "lucide-react";
 import { db } from "@/lib/db";
+import { serializeJsonLd } from "@/lib/json-ld";
 import { formatMoneyDecimal, STORE_CURRENCY } from "@/lib/money";
+import { getCurrentUser } from "@/lib/auth/dal";
 import { ProductPurchasePanel } from "@/components/store/product-purchase-panel";
+import { ReviewForm } from "@/components/reviews/review-form";
+import { ReviewGallery } from "@/components/reviews/review-gallery";
+import { StarRating } from "@/components/reviews/star-rating";
+import { Button } from "@/components/ui/button";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -40,10 +47,51 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       videos: { orderBy: { sortOrder: "asc" } },
       specs: { orderBy: { sortOrder: "asc" } },
       variants: { where: { isActive: true }, orderBy: { sortOrder: "asc" } },
+      blogPost: {
+        select: {
+          title: true,
+          slug: true,
+          isPublished: true,
+        },
+      },
     },
   });
 
   if (!product || product.status !== "PUBLISHED") notFound();
+
+  const currentUser = await getCurrentUser();
+  const reviews = await db.review.findMany({
+    where: { productId: product.id, status: "APPROVED" },
+    orderBy: { createdAt: "desc" },
+    take: 12,
+    include: {
+      likes: {
+        where: { userId: currentUser?.id ?? "__guest__" },
+        select: { id: true },
+      },
+      _count: { select: { likes: true } },
+    },
+  });
+
+  const reviewItems = reviews.map((review) => ({
+    id: review.id,
+    rating: review.rating,
+    title: review.title,
+    body: review.body,
+    authorName: review.authorName,
+    createdAtLabel: new Intl.DateTimeFormat("en-GB", {
+      dateStyle: "medium",
+    }).format(review.createdAt),
+    isVerifiedPurchase: review.isVerifiedPurchase,
+    imageUrls: review.imageUrls,
+    likeCount: review._count.likes,
+    liked: review.likes.length > 0,
+    product: {
+      name: product.name,
+      slug: product.slug,
+      imageUrl: product.images[0]?.url ?? null,
+    },
+  }));
 
   const purchaseVariants = product.variants.map((variant) => ({
     id: variant.id,
@@ -93,7 +141,10 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
   return (
     <div className="container-page py-12">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
+      />
       <nav className="mb-8 text-sm text-muted">
         <Link href="/" className="hover:text-forest-900">Home</Link> / <Link href="/shop" className="hover:text-forest-900">Shop</Link> / <Link href={`/shop?category=${product.category.slug}`} className="hover:text-forest-900">{product.category.name}</Link> / <span className="text-forest-900">{product.name}</span>
       </nav>
@@ -123,6 +174,31 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           <div>
             <p className="text-sm text-muted">{product.category.name}</p>
             <h1 className="mt-1 text-3xl font-semibold text-forest-900">{product.name}</h1>
+            <div className="mt-2.5 flex flex-wrap items-center gap-2 text-sm">
+              {product.ratingCount > 0 ? (
+                <>
+                  <StarRating
+                    rating={Number(product.ratingAverage)}
+                    showValue
+                    size="md"
+                  />
+                  <a
+                    href="#reviews"
+                    className="text-xs font-medium text-muted hover:text-forest-900 hover:underline"
+                  >
+                    {product.ratingCount} review
+                    {product.ratingCount === 1 ? "" : "s"}
+                  </a>
+                </>
+              ) : (
+                <a
+                  href="#reviews"
+                  className="text-xs font-medium text-muted hover:text-forest-900 hover:underline"
+                >
+                  Be the first to review this product
+                </a>
+              )}
+            </div>
           </div>
 
           <ProductPurchasePanel
@@ -142,6 +218,26 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           />
 
           {product.shortDescription && <p className="text-base leading-relaxed text-ink-soft">{product.shortDescription}</p>}
+
+          {product.blogPost?.isPublished && (
+            <Link
+              href={`/blogs/${product.blogPost.slug}`}
+              className="group flex items-center gap-3 rounded-lg border border-gold-500/35 bg-gold-500/10 p-4 transition-colors hover:border-gold-600/60 hover:bg-gold-500/15"
+            >
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-cream-50 text-gold-700">
+                <BookOpen className="size-5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[0.65rem] font-bold tracking-[0.14em] text-earth-700 uppercase">
+                  Recipe & story
+                </span>
+                <span className="block truncate text-sm font-semibold text-forest-900 group-hover:underline">
+                  {product.blogPost.title}
+                </span>
+              </span>
+              <ArrowRight className="size-4 shrink-0 text-earth-600 transition-transform group-hover:translate-x-0.5" />
+            </Link>
+          )}
 
           <div className="rounded-lg border border-line bg-cream-100/40 p-4 text-sm text-muted">
             <p className="font-medium text-forest-900">Delivery</p>
@@ -179,6 +275,79 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           )}
         </div>
       )}
+
+      <section
+        id="reviews"
+        className="mt-16 scroll-mt-28 border-t border-line pt-10"
+      >
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="eyebrow">Customer feedback</p>
+            <h2 className="mt-1 text-2xl font-semibold text-forest-900">
+              Reviews
+            </h2>
+            {product.ratingCount > 0 ? (
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted">
+                <StarRating
+                  rating={Number(product.ratingAverage)}
+                  showValue
+                  size="md"
+                />
+                <span>
+                  Based on {product.ratingCount} approved review
+                  {product.ratingCount === 1 ? "" : "s"}
+                </span>
+              </div>
+            ) : (
+              <p className="mt-2 text-sm text-muted">
+                No approved reviews yet. Share your experience with other
+                customers.
+              </p>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline">
+              <Link href="/reviews">All customer reviews</Link>
+            </Button>
+            <Button asChild>
+              <a href="#write-review">Write a review</a>
+            </Button>
+          </div>
+        </div>
+
+        {reviewItems.length > 0 ? (
+          <ReviewGallery
+            items={reviewItems}
+            authenticated={Boolean(currentUser)}
+            showProduct={false}
+            loginHref={`/login?next=${encodeURIComponent(
+              `/shop/${product.slug}#reviews`,
+            )}`}
+            className="mt-6"
+          />
+        ) : (
+          <div className="mt-6 rounded-lg border border-dashed border-line-strong bg-cream-100/40 px-5 py-8 text-center">
+            <p className="text-sm font-medium text-forest-900">
+              No reviews to show yet
+            </p>
+            <p className="mt-1 text-xs text-muted">
+              Approved reviews and customer photos will appear here.
+            </p>
+          </div>
+        )}
+
+        <div className="mt-8 max-w-3xl">
+          <ReviewForm
+            products={[{ id: product.id, name: product.name }]}
+            initialProductId={product.id}
+            fixedProduct
+            authenticated={Boolean(currentUser)}
+            loginHref={`/login?next=${encodeURIComponent(
+              `/shop/${product.slug}#write-review`,
+            )}`}
+          />
+        </div>
+      </section>
 
       {related.length > 0 && (
         <section className="mt-16">

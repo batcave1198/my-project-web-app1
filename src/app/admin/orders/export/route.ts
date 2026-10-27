@@ -5,9 +5,15 @@ import { parseOrderFilters } from "@/lib/admin/orders";
 export const dynamic = "force-dynamic";
 
 function csvCell(value: unknown) {
-  if (value === null || value === undefined) return "";
+  if (value === null || value === undefined) return '""';
   const text = String(value);
-  return `"${text.replace(/"/g, '""')}"`;
+  // CSV formula injection: a cell beginning with =, +, -, @, tab or CR can be
+  // executed as a formula by Excel/Sheets. Prefix it with an apostrophe before
+  // applying normal CSV quoting. Whitespace is considered because spreadsheets
+  // trim leading spaces before evaluating a cell.
+  const dangerous = /^\s*[=+\-@\t\r]/.test(text);
+  const safe = dangerous ? `'${text}` : text;
+  return `"${safe.replace(/"/g, '""')}"`;
 }
 
 export async function GET(request: Request) {

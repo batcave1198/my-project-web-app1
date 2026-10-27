@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import * as Dialog from "@radix-ui/react-dialog";
 import {
   BadgePercent,
+  BookOpen,
   ChevronRight,
   FileText,
   Images,
@@ -70,6 +71,7 @@ const navGroups: Array<{ title: string; items: NavItem[] }> = [
     title: "Content",
     items: [
       { href: "/admin/content", label: "Pages & FAQ", icon: FileText },
+      { href: "/admin/blogs", label: "Blogs & Recipes", icon: BookOpen },
       { href: "/admin/gallery", label: "Gallery", icon: Images },
       { href: "/admin/contact-messages", label: "Messages", icon: Mail },
     ],

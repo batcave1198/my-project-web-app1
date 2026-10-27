@@ -21,6 +21,13 @@ export const loginSchema = z.object({
   next: z.string().optional(),
 });
 
+export const mfaCodeSchema = z
+  .string()
+  .trim()
+  .min(6, "Enter the 6-digit code from your authenticator app")
+  .max(32, "That code is too long")
+  .regex(/^[A-Za-z0-9-]+$/, "Enter a valid authenticator or recovery code");
+
 export const registerSchema = z
   .object({
     name: z
@@ -35,6 +42,21 @@ export const registerSchema = z
     acceptTerms: z.literal(true, {
       error: "You must accept the Terms and Privacy Policy",
     }),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
+export const passwordResetRequestSchema = z.object({
+  email: emailSchema,
+});
+
+export const passwordResetSchema = z
+  .object({
+    token: z.string().min(20, "This reset link is invalid").max(200),
+    password: passwordSchema,
+    confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",

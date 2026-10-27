@@ -1,6 +1,8 @@
 import "server-only";
+import { after } from "next/server";
 import { db } from "@/lib/db";
 import { getEnv } from "@/lib/env";
+import { sendOrderConfirmationEmail } from "@/lib/email/order";
 import { payHereNotifyHash, safeCompare } from "@/lib/payhere";
 
 /**
@@ -71,7 +73,7 @@ export async function POST(request: Request) {
   if (statusCode === "2") {
     // Success. Guard with a conditional update so a duplicate callback cannot
     // decrement stock twice.
-    await db.$transaction(async (tx) => {
+    const result = await db.$transaction(async (tx) => {
       const claimed = await tx.order.updateMany({
         where: { id: order.id, paymentStatus: { not: "PAID" } },
         data: {
@@ -184,6 +186,14 @@ export async function POST(request: Request) {
 
       return { claimed: true };
     });
+
+    if (result.claimed) {
+      after(async () => {
+        await sendOrderConfirmationEmail(order).catch((error) => {
+          console.error("[email] order confirmation failed", error);
+        });
+      });
+    }
 
     return new Response("OK", { status: 200 });
   }
